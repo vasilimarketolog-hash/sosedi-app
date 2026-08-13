@@ -1,0 +1,461 @@
+import { User, Post, MarketItem, MasterService, MapMarker, HouseChat, NeighborhoodInfo } from './types';
+
+export const currentUser: User = {
+  id: 'u_me',
+  name: 'Алексей Смирнов',
+  avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
+  address: 'Лиговский проспект, 45к2',
+  building: 'Дом 45, корпус 2',
+  entrance: 3,
+  apartment: 112,
+  verified: true,
+  verifiedMethod: 'Подтверждено через Госуслуги и квитанцию ЖКХ',
+  rating: 4.9,
+  thanksCount: 38,
+  joinedDate: 'Октябрь 2024',
+  bio: 'Живу в 3-м подъезде. Увлекаюсь бегом в парке и велопрогулками. Участник совета дома.',
+  phone: '+7 (921) 987-65-43',
+};
+
+export const currentNeighborhood: NeighborhoodInfo = {
+  id: 'n_ligovsky',
+  name: 'ЖК «Лиговский Сити»',
+  city: 'Санкт-Петербург',
+  district: 'Фрунзенский район',
+  housesCount: 4,
+  residentsCount: 1420,
+  activeAnnouncements: 34,
+  coverImage: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&q=80&w=1000',
+};
+
+export const availableNeighborhoods: NeighborhoodInfo[] = [
+  currentNeighborhood,
+  {
+    id: 'n_chertanovo',
+    name: 'Микрорайон «Северное Чертаново»',
+    city: 'Москва',
+    district: 'ЮАО',
+    housesCount: 12,
+    residentsCount: 3890,
+    activeAnnouncements: 89,
+    coverImage: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=1000',
+  },
+  {
+    id: 'n_nurly',
+    name: 'ЖК «Нурлы Тау»',
+    city: 'Алматы',
+    district: 'Бостандыкский район',
+    housesCount: 8,
+    residentsCount: 2450,
+    activeAnnouncements: 52,
+    coverImage: 'https://images.unsplash.com/photo-1577495508048-b635879837f1?auto=format&fit=crop&q=80&w=1000',
+  },
+  {
+    id: 'n_minsk',
+    name: 'ЖК «Новая Боровая»',
+    city: 'Минск',
+    district: 'Копище',
+    housesCount: 6,
+    residentsCount: 1890,
+    activeAnnouncements: 41,
+    coverImage: 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&q=80&w=1000',
+  }
+];
+
+export const initialPosts: Post[] = [
+  {
+    id: 'p_1',
+    authorId: 'u_101',
+    authorName: 'Михаил Ковалёв',
+    authorAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=250',
+    authorAddress: 'д. 45к2, Подъезд 2',
+    verified: true,
+    timestamp: '25 минут назад',
+    category: 'urgent',
+    pinned: true,
+    title: '🚨 Внимание! Отключение горячей воды 15 августа',
+    content: 'Управляющая компания «Лиговский Сервис» сообщает, что в связи с плановой опрессовкой теплосетей 15 августа с 09:00 до 20:00 будет временно отключено горячее водоснабжение в корпусах 1, 2 и 3. Наберите запасы воды заранее!',
+    likes: 24,
+    userLiked: false,
+    tags: ['УК', 'Водоснабжение', 'Важное'],
+    comments: [
+      {
+        id: 'c_1',
+        authorName: 'Ольга Петрова',
+        authorAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=250',
+        authorAddress: 'д. 45к2, Подъезд 1',
+        verified: true,
+        content: 'Спасибо за предупреждение! Опять бойлер включать.',
+        timestamp: '15 минут назад',
+        likes: 3,
+      },
+      {
+        id: 'c_2',
+        authorName: 'Дмитрий Соколов',
+        authorAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=250',
+        authorAddress: 'д. 45к1, Подъезд 4',
+        verified: true,
+        content: 'А холодная вода будет работать без перебоев?',
+        timestamp: '8 минут назад',
+        likes: 1,
+      }
+    ]
+  },
+  {
+    id: 'p_2',
+    authorId: 'u_102',
+    authorName: 'Екатерина Морозова',
+    authorAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=250',
+    authorAddress: 'д. 45к2, Подъезд 3 (соседка с 6 этажа)',
+    verified: true,
+    timestamp: '2 часа назад',
+    category: 'improvements',
+    title: '🌿 Опрос: Давайте устроим осенний субботник и посадим туи во дворе!',
+    content: 'Соседи, привет! Инициативная группа нашего ЖК предлагает провести субботник в эту субботу в 11:00. Мы соберём сухие листья, уберём мусор с газонов и заготовим саженцы туи для центральной аллеи. Саженцы выделит ТСЖ!',
+    likes: 42,
+    userLiked: true,
+    poll: {
+      id: 'poll_1',
+      question: 'Прийдёте ли вы на субботник в субботу в 11:00?',
+      options: [
+        { id: 'opt_1', text: 'Да, обязательно приду с инвентарём!', votes: 18 },
+        { id: 'opt_2', text: 'Постараюсь, если буду свободен', votes: 12 },
+        { id: 'opt_3', text: 'К сожалению, уезжаю за город', votes: 7 },
+      ],
+      totalVotes: 37,
+      userVotedOptionId: 'opt_1',
+    },
+    comments: [
+      {
+        id: 'c_3',
+        authorName: 'Сергей Васин',
+        authorAvatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&q=80&w=250',
+        authorAddress: 'д. 45к3, Подъезд 1',
+        verified: true,
+        content: 'Отличная идея! Я принесу пару граблей и чай в термосе для всех.',
+        timestamp: '1 час назад',
+        likes: 8,
+      }
+    ]
+  },
+  {
+    id: 'p_3',
+    authorId: 'u_103',
+    authorName: 'Игорь Мельников',
+    authorAvatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=250',
+    authorAddress: 'д. 45к1, Подъезд 2',
+    verified: true,
+    timestamp: '4 часа назад',
+    category: 'general',
+    title: '🐶 Найден шпиц с рыжим ошейником возле детской площадки!',
+    content: 'Соседи, чья собачка? Маленький рыжий шпиц, ухоженный, с синим ошейником без жетона. Бегал у 2-го корпуса около 15:00. Временно взял к себе домой в кв. 54. Звоните или пишите в ЛС!',
+    images: [
+      'https://images.unsplash.com/photo-1587300003388-59208cc962cb?auto=format&fit=crop&q=80&w=800'
+    ],
+    likes: 31,
+    userLiked: false,
+    comments: [
+      {
+        id: 'c_4',
+        authorName: 'Анна Кузнецова',
+        authorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
+        authorAddress: 'д. 45к2, Подъезд 4',
+        verified: true,
+        content: 'Это собака Марины из 4-го подъезда! Сейчас перекину ей ссылку в чат собаководов.',
+        timestamp: '3 часа назад',
+        likes: 12,
+      }
+    ]
+  }
+];
+
+export const initialMarketItems: MarketItem[] = [
+  {
+    id: 'm_1',
+    title: 'Детская коляска 3-в-1 Tutis Uno3 (в отличном состоянии)',
+    price: 0, // Отдам даром
+    category: 'free',
+    description: 'Отдадим бесплатно соседям по ЖК! Просторная люлька, прогулочный блок и автокресло. Все чехлы постираны. Самовывоз из 3-го подъезда корпуса 2.',
+    image: 'https://images.unsplash.com/photo-1591088398332-8a7791972843?auto=format&fit=crop&q=80&w=800',
+    sellerName: 'Оксана Белова',
+    sellerAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=250',
+    sellerAddress: 'д. 45к2, Подъезд 3',
+    sellerVerified: true,
+    status: 'available',
+    condition: 'like_new',
+    date: 'Сегодня, 10:15',
+    views: 84,
+  },
+  {
+    id: 'm_2',
+    title: 'Раскладной диван IKEA Beddinge (серый)',
+    price: 4500,
+    category: 'furniture',
+    description: 'В связи с обновлением интерьера продаём раскладной диван. Механизм клик-кляк работает идеально, чехол съёмный. Поможем спустить на лифте!',
+    image: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&q=80&w=800',
+    sellerName: 'Артем Громов',
+    sellerAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=250',
+    sellerAddress: 'д. 45к1, Подъезд 1',
+    sellerVerified: true,
+    status: 'available',
+    condition: 'used',
+    date: 'Вчера, 18:40',
+    views: 142,
+  },
+  {
+    id: 'm_3',
+    title: 'Остатки ламината Classen 33 класс (3 целые упаковки + обрезки)',
+    price: 0, // Отдам даром
+    category: 'free',
+    description: 'Остался после ремонта в спальне. Цвет "Дуб Светлый", толщина 8 мм. Отдам даром соседям, кому нужно на балкон или небольшой участок.',
+    image: 'https://images.unsplash.com/photo-1581858726788-75bc0f6a952d?auto=format&fit=crop&q=80&w=800',
+    sellerName: 'Виталий Семенов',
+    sellerAvatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=250',
+    sellerAddress: 'д. 45к3, Подъезд 2',
+    sellerVerified: true,
+    status: 'available',
+    condition: 'new',
+    date: 'Вчера, 14:20',
+    views: 96,
+  },
+  {
+    id: 'm_4',
+    title: 'Детский велосипед Puky LR 1L (с 2.5 до 5 лет)',
+    price: 3200,
+    category: 'kids',
+    description: 'Качественный немецкий беговел с надувными колёсами и подножкой. Ребёнок научился держать баланс за неделю!',
+    image: 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&q=80&w=800',
+    sellerName: 'Наталья Захарова',
+    sellerAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=250',
+    sellerAddress: 'д. 45к2, Подъезд 4',
+    sellerVerified: true,
+    status: 'available',
+    condition: 'used',
+    date: '3 дня назад',
+    views: 210,
+  }
+];
+
+export const initialMasters: MasterService[] = [
+  {
+    id: 'mast_1',
+    name: 'Александр Романов',
+    avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=250',
+    category: 'Сантехника и Водоснабжение',
+    categorySlug: 'plumbing',
+    rating: 4.98,
+    reviewsCount: 47,
+    verifiedNeighbor: true,
+    address: 'д. 45к2, Подъезд 1 (твой сосед!)',
+    phone: '+7 (911) 123-45-67',
+    priceStarting: 'от 800 ₽',
+    description: 'Сертифицированный сантехник с опытом 12 лет. Проживаю в нашем ЖК. Установка смесителей, фильтров очистки воды, замена разводки, сборка душевых кабин. Быстрый выезд при протечках 24/7.',
+    skills: ['Установка фильтров', 'Замена смесителя', 'Разводка Rehau', 'Аварийный выезд'],
+    badges: ['Сосед с 1-го корпуса', 'Топ по отзывам', 'Гарантия 1 год'],
+  },
+  {
+    id: 'mast_2',
+    name: 'Владимир Орлов',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
+    category: 'Электрика и Умный дом',
+    categorySlug: 'electric',
+    rating: 4.95,
+    reviewsCount: 38,
+    verifiedNeighbor: true,
+    address: 'д. 45к1, Подъезд 3',
+    phone: '+7 (921) 555-77-88',
+    priceStarting: 'от 1000 ₽',
+    description: 'Инженер-электрик 5-й разряда. Монтаж розеток, сборка электрощитов, настройка умных выключателей Яндекс / Aqara. Работаю аккуратно, со своим пылесосом.',
+    skills: ['Монтаж розеток', 'Сборка щита', 'Умный дом', 'Поиск короткого замыкания'],
+    badges: ['Высшее профильное образование', 'Инструмент Bosch'],
+  },
+  {
+    id: 'mast_3',
+    name: 'Елена Васильева',
+    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=250',
+    category: 'Репетитор по Английскому и Математике',
+    categorySlug: 'tutor',
+    rating: 5.0,
+    reviewsCount: 29,
+    verifiedNeighbor: true,
+    address: 'д. 45к2, Подъезд 3, кв. 84',
+    phone: '+7 (931) 444-22-11',
+    priceStarting: 'от 1200 ₽ / час',
+    description: 'Учитель высшей категории, опыт 9 лет (C1 Advanced). Занятия для школьников (1–11 классы), подготовка к ОГЭ/ЕГЭ. Занятия прямо у меня дома в 3-м подъезде или у вас!',
+    skills: ['Подготовка к ЕГЭ/ОГЭ', 'Разговорный английский', 'Помощь с Д/З'],
+    badges: ['Диплом РГПУ им. Герцена', 'Пешая доступность'],
+  },
+  {
+    id: 'mast_4',
+    name: 'Анастасия и Собака Бадди',
+    avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=250',
+    category: 'Выгул и Присмотр за Питомцами',
+    categorySlug: 'pets',
+    rating: 4.92,
+    reviewsCount: 19,
+    verifiedNeighbor: true,
+    address: 'д. 45к3, Подъезд 2',
+    phone: '+7 (905) 999-00-11',
+    priceStarting: 'от 500 ₽ / выгул',
+    description: 'Обожаю животных! Проведу активную прогулку с вашей собакой в парке, покормлю котика во время вашего отпуска. Отправляю фото/видео отчеты с каждой прогулки.',
+    skills: ['Выгул собак', 'Догситтинг на дому', 'Кормление кошек'],
+    badges: ['Опыт с крупными породами', 'Фотоотчеты'],
+  }
+];
+
+export const initialMapMarkers: MapMarker[] = [
+  {
+    id: 'mark_1',
+    title: '🚨 Отключение горячей воды (15 авг)',
+    type: 'incident',
+    lat: 59.9145,
+    lng: 30.3582,
+    description: 'Плановые работы УК Лиговский Сервис с 9:00 до 20:00.',
+    author: 'УК «Лиговский Сервис»',
+    date: '15 августа',
+  },
+  {
+    id: 'mark_2',
+    title: '🌿 Осенний субботник & Посадка туй',
+    type: 'event',
+    lat: 59.9149,
+    lng: 30.3595,
+    description: 'Сбор инициативной группы у центральной клумбы двора 45к2.',
+    author: 'Екатерина Морозова',
+    date: 'Суббота, 11:00',
+  },
+  {
+    id: 'mark_3',
+    title: '🎁 Бесплатная детская коляска (Отдам даром)',
+    type: 'free_item',
+    lat: 59.9142,
+    lng: 30.3575,
+    description: 'Самовывоз из 3-го подъезда дома 45к2.',
+    author: 'Оксана Белова',
+  },
+  {
+    id: 'mark_4',
+    title: '🛠 Мастер Александр (Сантехник)',
+    type: 'master',
+    lat: 59.9147,
+    lng: 30.3578,
+    description: 'Проживает в корпусе 2. Готов к срочным вызовам.',
+    author: 'Александр Романов',
+  },
+  {
+    id: 'mark_5',
+    title: '☕ Кофейня «Соседи & Кофе»',
+    type: 'community_spot',
+    lat: 59.9152,
+    lng: 30.3588,
+    description: 'Скидка 15% для жителей ЖК Лиговский Сити по кодовому слову «Соседи».',
+    author: 'Партнёр ЖК',
+  }
+];
+
+export const initialHouseChats: HouseChat[] = [
+  {
+    id: 'chat_house',
+    name: '🏢 Общий чат дома (д. 45к2)',
+    description: 'Официальный чат жителей дома № 45 корпус 2. Вопросы ТСЖ, парковка, объявления.',
+    icon: 'Building2',
+    membersCount: 312,
+    unreadCount: 3,
+    type: 'house',
+    messages: [
+      {
+        id: 'cm_1',
+        senderId: 'u_201',
+        senderName: 'Анатолий К.',
+        senderAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=250',
+        senderAddress: 'д. 45к2, Подъезд 1',
+        verified: true,
+        text: 'Соседи, добрый день! Подскажите, у всех работает грузовой лифт в 1-м подъезде?',
+        timestamp: '11:40',
+      },
+      {
+        id: 'cm_2',
+        senderId: 'u_202',
+        senderName: 'Марина И.',
+        senderAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=250',
+        senderAddress: 'д. 45к2, Подъезд 1',
+        verified: true,
+        text: 'Его перезапустил диспетчер 10 минут назад, сейчас всё в порядке!',
+        timestamp: '11:43',
+      }
+    ]
+  },
+  {
+    id: 'chat_entrance',
+    name: '🚪 Чат 3-го Подъезда',
+    description: 'Уютный чат жителей 3-го подъезда. Замена лампочек, чистота, домофон.',
+    icon: 'DoorOpen',
+    membersCount: 48,
+    unreadCount: 1,
+    type: 'entrance',
+    messages: [
+      {
+        id: 'cm_3',
+        senderId: 'u_301',
+        senderName: 'Валентина Григорьевна',
+        senderAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=250',
+        senderAddress: 'кв. 104',
+        verified: true,
+        text: 'Кто-то оставил коробки около мусоропровода на 5 этаже. Пожалуйста, соберите в баки на улице.',
+        timestamp: '09:15',
+      },
+      {
+        id: 'cm_4',
+        senderId: 'u_me',
+        senderName: 'Алексей Смирнов',
+        senderAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
+        senderAddress: 'кв. 112',
+        verified: true,
+        text: 'Принято, я сейчас вынесу, когда пойду гулять со своей собакой!',
+        timestamp: '09:22',
+      }
+    ]
+  },
+  {
+    id: 'chat_auto',
+    name: '🚗 Авто-чат & Перепарковка',
+    description: 'Поиск владельцев авто во дворе по госномеру. Срочная просьба отъехать.',
+    icon: 'Car',
+    membersCount: 185,
+    unreadCount: 0,
+    type: 'auto',
+    messages: [
+      {
+        id: 'cm_5',
+        senderId: 'u_401',
+        senderName: 'Павел В.',
+        senderAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=250',
+        senderAddress: 'д. 45к1',
+        verified: true,
+        text: 'Владелец белого Kia Rio (номер К 777 АР 178), вы подпёрли выезд мусоровоза у 2-го корпуса, напишите мне или перепаркуйтесь пожалуйста!',
+        timestamp: 'Вчера',
+      }
+    ]
+  },
+  {
+    id: 'chat_pets',
+    name: '🐶 Клуб Собаководов ЖК',
+    description: 'Совместные прогулки, рекомендации ветеринаров, найденные питомцы.',
+    icon: 'Dog',
+    membersCount: 64,
+    unreadCount: 0,
+    type: 'pets',
+    messages: [
+      {
+        id: 'cm_6',
+        senderId: 'u_103',
+        senderName: 'Игорь М.',
+        senderAvatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=250',
+        senderAddress: 'д. 45к1',
+        verified: true,
+        text: 'Кто идёт сегодня на собачью площадку в 19:30? Наш лабрадор ищет компанию для игр!',
+        timestamp: '10:00',
+      }
+    ]
+  }
+];
