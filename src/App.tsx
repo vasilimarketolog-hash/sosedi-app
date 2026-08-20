@@ -5,6 +5,7 @@ import { Sidebar } from './components/Sidebar';
 import { VerificationModal } from './components/VerificationModal';
 import { CreatePostModal } from './components/CreatePostModal';
 import { CreateMarketModal } from './components/CreateMarketModal';
+import { RegistrationModal } from './components/Auth/RegistrationModal';
 
 import { FeedView } from './components/Feed/FeedView';
 import { MarketplaceView } from './components/Market/MarketplaceView';
@@ -16,7 +17,17 @@ import { ProfileView } from './components/Profile/ProfileView';
 import { Newspaper, ShoppingBag, Wrench, MapPin, MessageSquare, User } from 'lucide-react';
 
 const MainContent: React.FC = () => {
-  const { activeTab, setActiveTab } = useApp();
+  const { activeTab, setActiveTab, isRegisteringView, setIsRegisteringView } = useApp();
+
+  // If user clicked Registration, render dedicated Registration Page screen!
+  if (isRegisteringView) {
+    return (
+      <RegistrationModal 
+        isOpen={true} 
+        onClose={() => setIsRegisteringView(false)} 
+      />
+    );
+  }
 
   const renderActiveTab = () => {
     switch (activeTab) {

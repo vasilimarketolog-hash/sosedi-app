@@ -23,6 +23,8 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
     switch (post.category) {
       case 'urgent':
         return <span className="badge badge-urgent">🚨 Срочно & Инцидент</span>;
+      case 'events':
+        return <span className="badge badge-verified" style={{ background: '#f0fdf4', color: '#047857', borderColor: '#a7f3d0' }}>🎉 Событие & Праздник</span>;
       case 'improvements':
         return <span className="badge badge-primary">🌿 Благоустройство</span>;
       case 'uk_news':
@@ -298,9 +300,9 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
           top: 0;
           left: 0;
           bottom: 0;
-          background: #dcfce7;
+          background: linear-gradient(90deg, #dcfce7 0%, #a7f3d0 100%);
           z-index: 0;
-          transition: width 0.4s ease;
+          transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .poll-option-content {

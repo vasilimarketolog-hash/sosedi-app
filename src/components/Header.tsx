@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { 
   Building2, ShieldCheck, MapPin, Search, PlusCircle, 
-  Bell, ChevronDown, CheckCircle2, UserCheck, AlertTriangle, Sparkles
+  Bell, ChevronDown, CheckCircle2, UserCheck, AlertTriangle, Sparkles, UserPlus
 } from 'lucide-react';
 import { RadiusScope } from '../context/AppContext';
+import { RegistrationModal } from './Auth/RegistrationModal';
 
 export const Header: React.FC = () => {
   const { 
@@ -17,11 +18,32 @@ export const Header: React.FC = () => {
     setIsVerificationModalOpen,
     setIsCreatePostModalOpen,
     setIsCreateMarketModalOpen,
+    setIsRegisteringView,
     activeTab
   } = useApp();
 
   const [isNeighborhoodMenuOpen, setIsNeighborhoodMenuOpen] = useState(false);
   const [isScopeMenuOpen, setIsScopeMenuOpen] = useState(false);
+  const [isRegModalOpen, setIsRegModalOpen] = useState(false);
+
+  const neighborhoodRef = useRef<HTMLDivElement>(null);
+  const scopeRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown menus when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (neighborhoodRef.current && !neighborhoodRef.current.contains(event.target as Node)) {
+        setIsNeighborhoodMenuOpen(false);
+      }
+      if (scopeRef.current && !scopeRef.current.contains(event.target as Node)) {
+        setIsScopeMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const scopeLabels: Record<RadiusScope, string> = {
     house: 'Только мой дом',
@@ -41,12 +63,12 @@ export const Header: React.FC = () => {
             </div>
             <div className="logo-text-group">
               <span className="logo-title">Соседи<span className="logo-accent">.Онлайн</span></span>
-              <span className="logo-subtitle">СНГ • Сообщество жильцов</span>
+              <span className="logo-subtitle">🇧🇾 Беларусь • 🇰🇿 Казахстан</span>
             </div>
           </div>
 
           {/* Neighborhood Selector Dropdown */}
-          <div className="dropdown-wrapper">
+          <div className="dropdown-wrapper" ref={neighborhoodRef}>
             <button 
               className="neighborhood-selector-btn"
               onClick={() => setIsNeighborhoodMenuOpen(!isNeighborhoodMenuOpen)}
@@ -83,7 +105,7 @@ export const Header: React.FC = () => {
 
         {/* Scope Radius Selector */}
         <div className="scope-section">
-          <div className="dropdown-wrapper">
+          <div className="dropdown-wrapper" ref={scopeRef}>
             <button 
               className="scope-selector-btn"
               onClick={() => setIsScopeMenuOpen(!isScopeMenuOpen)}
@@ -114,8 +136,15 @@ export const Header: React.FC = () => {
           </div>
         </div>
 
-        {/* Action Buttons & User Verification Badge */}
+        {/* Action Buttons & User Verification / Registration */}
         <div className="actions-section">
+          {/* Country Flag Badge */}
+          {user.country && (
+            <span className="country-badge-flag" title={user.country === 'BY' ? 'Республика Беларусь' : 'Республика Казахстан'}>
+              {user.country === 'BY' ? '🇧🇾 РБ' : '🇰🇿 РК'}
+            </span>
+          )}
+
           {/* Verification Status */}
           {user.verified ? (
             <div className="verified-badge-pill" title={user.verifiedMethod}>
@@ -132,6 +161,15 @@ export const Header: React.FC = () => {
             </button>
           )}
 
+          {/* Registration Button */}
+          <button 
+            className="btn btn-secondary reg-nav-btn"
+            onClick={() => setIsRegisteringView(true)}
+          >
+            <UserPlus size={16} />
+            <span>Регистрация</span>
+          </button>
+
           {/* Quick Create Buttons */}
           {activeTab === 'market' ? (
             <button className="btn btn-primary" onClick={() => setIsCreateMarketModalOpen(true)}>
@@ -146,6 +184,11 @@ export const Header: React.FC = () => {
           )}
         </div>
       </div>
+
+      <RegistrationModal 
+        isOpen={isRegModalOpen} 
+        onClose={() => setIsRegModalOpen(false)} 
+      />
 
       <style>{`
         .sticky-header {
@@ -209,7 +252,7 @@ export const Header: React.FC = () => {
         .logo-subtitle {
           font-size: 0.72rem;
           color: #64748b;
-          font-weight: 500;
+          font-weight: 600;
         }
 
         .dropdown-wrapper {
@@ -327,6 +370,16 @@ export const Header: React.FC = () => {
           gap: 12px;
         }
 
+        .country-badge-flag {
+          background: #f1f5f9;
+          border: 1px solid #cbd5e1;
+          padding: 4px 10px;
+          border-radius: 16px;
+          font-size: 0.8rem;
+          font-weight: 700;
+          color: #334155;
+        }
+
         .verified-badge-pill {
           display: flex;
           align-items: center;
@@ -356,6 +409,14 @@ export const Header: React.FC = () => {
 
         .unverified-btn-pill:hover {
           background: #fef3c7;
+        }
+
+        .reg-nav-btn {
+          border-color: #059669;
+          color: #059669;
+        }
+        .reg-nav-btn:hover {
+          background: #ecfdf5;
         }
 
         @media (max-width: 900px) {

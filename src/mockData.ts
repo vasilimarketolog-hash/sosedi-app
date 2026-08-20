@@ -29,16 +29,15 @@ export const currentNeighborhood: NeighborhoodInfo = {
 };
 
 export const availableNeighborhoods: NeighborhoodInfo[] = [
-  currentNeighborhood,
   {
-    id: 'n_chertanovo',
-    name: 'Микрорайон «Северное Чертаново»',
-    city: 'Москва',
-    district: 'ЮАО',
-    housesCount: 12,
-    residentsCount: 3890,
-    activeAnnouncements: 89,
-    coverImage: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=1000',
+    id: 'n_minsk',
+    name: 'ЖК «Новая Боровая»',
+    city: 'Минск',
+    district: 'Копище',
+    housesCount: 6,
+    residentsCount: 1890,
+    activeAnnouncements: 41,
+    coverImage: 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&q=80&w=1000',
   },
   {
     id: 'n_nurly',
@@ -50,19 +49,59 @@ export const availableNeighborhoods: NeighborhoodInfo[] = [
     activeAnnouncements: 52,
     coverImage: 'https://images.unsplash.com/photo-1577495508048-b635879837f1?auto=format&fit=crop&q=80&w=1000',
   },
+  currentNeighborhood,
   {
-    id: 'n_minsk',
-    name: 'ЖК «Новая Боровая»',
-    city: 'Минск',
-    district: 'Копище',
-    housesCount: 6,
-    residentsCount: 1890,
-    activeAnnouncements: 41,
-    coverImage: 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&q=80&w=1000',
+    id: 'n_chertanovo',
+    name: 'Микрорайон «Северное Чертаново»',
+    city: 'Москва',
+    district: 'ЮАО',
+    housesCount: 12,
+    residentsCount: 3890,
+    activeAnnouncements: 89,
+    coverImage: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=1000',
   }
 ];
 
 export const initialPosts: Post[] = [
+  {
+    id: 'p_event_1',
+    authorId: 'u_105',
+    authorName: 'Екатерина Морозова',
+    authorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
+    authorAddress: 'д. 45к2, Подъезд 3',
+    verified: true,
+    timestamp: 'Час назад',
+    category: 'events',
+    pinned: false,
+    title: '🎉 Осенний Праздник Двора & Соседский Субботник!',
+    content: 'Соседи, приглашаем всех на праздник нашего ЖК! В субботу в 12:00: посадка туй и газона, аниматоры для детей, чай из самовара и настольные игры во дворе. Приходите всей семьёй!',
+    images: ['https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&fit=crop&q=80&w=800'],
+    likes: 42,
+    userLiked: true,
+    tags: ['Праздник', 'Субботник', 'Семья'],
+    poll: {
+      id: 'poll_event',
+      question: 'Придёте на праздничный субботник во дворе?',
+      options: [
+        { id: 'opt_1', text: '🙋‍♂️ Да, обязательно придём всей семьёй!', votes: 28 },
+        { id: 'opt_2', text: '☕ Загляну на чай и общение', votes: 14 },
+        { id: 'opt_3', text: '😔 Не смогу, буду в отъезде', votes: 3 },
+      ],
+      totalVotes: 45,
+    },
+    comments: [
+      {
+        id: 'c_ev_1',
+        authorName: 'Сергей Сидоров',
+        authorAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=250',
+        authorAddress: 'д. 45к2, Подъезд 1',
+        verified: true,
+        content: 'Отличная идея! Я принесу гитару и колонку 🎸',
+        timestamp: '40 минут назад',
+        likes: 12,
+      }
+    ],
+  },
   {
     id: 'p_1',
     authorId: 'u_101',
@@ -335,6 +374,34 @@ export const initialMapMarkers: MapMarker[] = [
   },
   {
     id: 'mark_4',
+    title: '🐱 ПОТЕРЯЛСЯ кот Барсик (Рыжий шпиц / Кот)!',
+    type: 'lost_pet',
+    lat: 59.9148,
+    lng: 30.3571,
+    description: 'Убежал возле 2-го подъезда дома 12. Рыжий, на шее синий ошейник. Звоните в любое время!',
+    author: 'Игорь Мельников (Подъезд 2)',
+    date: 'Срочно',
+  },
+  {
+    id: 'mark_5',
+    title: '🎃 Свежие кабачки и яблоки с огородного участка',
+    type: 'harvest',
+    lat: 59.9155,
+    lng: 30.3591,
+    description: 'Экологически чистый урожай с дачи! Кабачки по 150 ₽/кг, яблоки Белый Налив. Самовывоз из 1-го подъезда.',
+    author: 'Бабушка Анна (Подъезд 1)',
+  },
+  {
+    id: 'mark_6',
+    title: '🎹 Продаётся Пианино «Беларусь» (Самовывоз)',
+    type: 'sale_item',
+    lat: 59.9139,
+    lng: 30.3580,
+    description: 'В хорошем настроенном состоянии. Отдадим со скидкой соседям по ЖК! 3-й этаж, есть грузовой лифт.',
+    author: 'Семья Васильевых (Подъезд 3)',
+  },
+  {
+    id: 'mark_7',
     title: '🛠 Мастер Александр (Сантехник)',
     type: 'master',
     lat: 59.9147,
@@ -343,12 +410,12 @@ export const initialMapMarkers: MapMarker[] = [
     author: 'Александр Романов',
   },
   {
-    id: 'mark_5',
+    id: 'mark_8',
     title: '☕ Кофейня «Соседи & Кофе»',
     type: 'community_spot',
     lat: 59.9152,
     lng: 30.3588,
-    description: 'Скидка 15% для жителей ЖК Лиговский Сити по кодовому слову «Соседи».',
+    description: 'Скидка 15% для жителей ЖК по кодовому слову «Соседи».',
     author: 'Партнёр ЖК',
   }
 ];

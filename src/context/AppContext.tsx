@@ -64,6 +64,9 @@ interface AppContextType {
 
   isCreateMarketModalOpen: boolean;
   setIsCreateMarketModalOpen: (open: boolean) => void;
+
+  isRegisteringView: boolean;
+  setIsRegisteringView: (open: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -104,6 +107,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isVerificationModalOpen, setIsVerificationModalOpen] = useState<boolean>(false);
   const [isCreatePostModalOpen, setIsCreatePostModalOpen] = useState<boolean>(false);
   const [isCreateMarketModalOpen, setIsCreateMarketModalOpen] = useState<boolean>(false);
+  const [isRegisteringView, setIsRegisteringView] = useState<boolean>(false);
 
   useEffect(() => {
     localStorage.setItem('sosedi_user', JSON.stringify(user));
@@ -275,6 +279,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setIsCreatePostModalOpen,
       isCreateMarketModalOpen,
       setIsCreateMarketModalOpen,
+      isRegisteringView,
+      setIsRegisteringView,
     }}>
       {children}
     </AppContext.Provider>

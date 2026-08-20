@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useApp } from '../../context/AppContext';
-import { MapPin, AlertTriangle, Gift, Wrench, Coffee, Calendar, Info } from 'lucide-react';
+import { MapPin, AlertTriangle, Gift, Wrench, Coffee, Calendar, Info, Heart, ShoppingBag } from 'lucide-react';
 import { MapMarker } from '../../types';
 
 // Fix Leaflet marker icons default path in React
@@ -19,10 +19,13 @@ const createCustomIcon = (type: MapMarker['type']) => {
   let emoji = '📍';
 
   if (type === 'incident') { color = '#ef4444'; emoji = '🚨'; }
-  if (type === 'event') { color = '#10b981'; emoji = '🌿'; }
+  if (type === 'lost_pet') { color = '#ec4899'; emoji = '🐱'; }
   if (type === 'free_item') { color = '#0284c7'; emoji = '🎁'; }
-  if (type === 'master') { color = '#d97706'; emoji = '🛠️'; }
-  if (type === 'community_spot') { color = '#8b5cf6'; emoji = '☕'; }
+  if (type === 'harvest') { color = '#d97706'; emoji = '🎃'; }
+  if (type === 'sale_item') { color = '#8b5cf6'; emoji = '🎹'; }
+  if (type === 'event') { color = '#10b981'; emoji = '🌿'; }
+  if (type === 'master') { color = '#059669'; emoji = '🛠️'; }
+  if (type === 'community_spot') { color = '#6366f1'; emoji = '☕'; }
 
   return L.divIcon({
     className: 'custom-map-pin',
@@ -31,20 +34,20 @@ const createCustomIcon = (type: MapMarker['type']) => {
         background: ${color}; 
         color: white; 
         border-radius: 50%; 
-        width: 36px; 
-        height: 36px; 
+        width: 38px; 
+        height: 38px; 
         display: flex; 
         align-items: center; 
         justify-content: center; 
-        font-size: 18px;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        font-size: 20px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.35);
         border: 2px solid white;
       ">
         ${emoji}
       </div>
     `,
-    iconSize: [36, 36],
-    iconAnchor: [18, 36],
+    iconSize: [38, 38],
+    iconAnchor: [19, 38],
   });
 };
 
@@ -53,7 +56,7 @@ export const NeighborhoodMap: React.FC = () => {
   const [filterType, setFilterType] = useState<string>('all');
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(mapMarkers[0]);
 
-  // Coordinates centered on St. Petersburg Ligovsky area
+  // Coordinates centered on neighborhood
   const centerLat = 59.9147;
   const centerLng = 30.3582;
 
@@ -71,14 +74,16 @@ export const NeighborhoodMap: React.FC = () => {
             <MapPin size={20} className="text-emerald" />
             <h2>Интерактивная карта {currentNeighborhood.name}</h2>
           </div>
-          <p>Отметки об авариях, местах субботников, бесплатных вещах и мастерах вашего двора</p>
+          <p>Найдите потерянных питомцев, бесплатные вещи, урожай соседей, пианино и отключения ЖКХ рядом с вашим домом!</p>
         </div>
 
         <div className="map-filter-buttons">
-          <button className={`filter-btn ${filterType === 'all' ? 'active' : ''}`} onClick={() => setFilterType('all')}>Все метки</button>
-          <button className={`filter-btn ${filterType === 'incident' ? 'active' : ''}`} onClick={() => setFilterType('incident')}>🚨 Аварии</button>
-          <button className={`filter-btn ${filterType === 'event' ? 'active' : ''}`} onClick={() => setFilterType('event')}>🌿 События</button>
+          <button className={`filter-btn ${filterType === 'all' ? 'active' : ''}`} onClick={() => setFilterType('all')}>🔥 Все метки</button>
+          <button className={`filter-btn ${filterType === 'lost_pet' ? 'active' : ''}`} onClick={() => setFilterType('lost_pet')}>🐱 Потерялся кот/собака</button>
           <button className={`filter-btn ${filterType === 'free_item' ? 'active' : ''}`} onClick={() => setFilterType('free_item')}>🎁 Отдам даром</button>
+          <button className={`filter-btn ${filterType === 'harvest' ? 'active' : ''}`} onClick={() => setFilterType('harvest')}>🎃 Кабачки & Урожай</button>
+          <button className={`filter-btn ${filterType === 'sale_item' ? 'active' : ''}`} onClick={() => setFilterType('sale_item')}>🎹 Пианино & Вещи</button>
+          <button className={`filter-btn ${filterType === 'incident' ? 'active' : ''}`} onClick={() => setFilterType('incident')}>🚨 Отключения ЖКХ</button>
           <button className={`filter-btn ${filterType === 'master' ? 'active' : ''}`} onClick={() => setFilterType('master')}>🛠 Мастера</button>
         </div>
       </div>
@@ -89,7 +94,7 @@ export const NeighborhoodMap: React.FC = () => {
           center={[centerLat, centerLng]} 
           zoom={16} 
           scrollWheelZoom={false}
-          style={{ width: '100%', height: '520px', borderRadius: '16px' }}
+          style={{ width: '100%', height: '540px', borderRadius: '16px' }}
         >
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -124,7 +129,15 @@ export const NeighborhoodMap: React.FC = () => {
               {selectedMarker.date && <span className="badge badge-primary">{selectedMarker.date}</span>}
             </div>
             <p className="detail-desc">{selectedMarker.description}</p>
-            <div className="detail-author">Разместил: <strong>{selectedMarker.author}</strong></div>
+            <div className="detail-author-row">
+              <span className="detail-author">Сосед: <strong>{selectedMarker.author}</strong></span>
+              <button 
+                className="btn btn-primary btn-sm"
+                onClick={() => alert(`Связь с соседом по объявлению "${selectedMarker.title}"`)}
+              >
+                Связаться в чате
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -163,6 +176,7 @@ export const NeighborhoodMap: React.FC = () => {
           display: flex;
           gap: 8px;
           overflow-x: auto;
+          padding-bottom: 4px;
         }
 
         .filter-btn {
@@ -214,7 +228,7 @@ export const NeighborhoodMap: React.FC = () => {
           bottom: 20px;
           left: 20px;
           right: 20px;
-          background: rgba(255, 255, 255, 0.95);
+          background: rgba(255, 255, 255, 0.96);
           backdrop-filter: blur(10px);
           border: 1px solid var(--border-color);
           border-radius: 12px;
@@ -223,7 +237,7 @@ export const NeighborhoodMap: React.FC = () => {
           box-shadow: 0 10px 25px rgba(0,0,0,0.15);
           display: flex;
           flex-direction: column;
-          gap: 6px;
+          gap: 8px;
         }
 
         .detail-header {
@@ -234,17 +248,25 @@ export const NeighborhoodMap: React.FC = () => {
 
         .detail-title {
           font-weight: 800;
-          font-size: 0.95rem;
+          font-size: 0.98rem;
           color: #0f172a;
         }
 
         .detail-desc {
-          font-size: 0.85rem;
+          font-size: 0.86rem;
           color: #334155;
         }
 
+        .detail-author-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding-top: 6px;
+          border-top: 1px solid #f1f5f9;
+        }
+
         .detail-author {
-          font-size: 0.76rem;
+          font-size: 0.78rem;
           color: #64748b;
         }
       `}</style>

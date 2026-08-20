@@ -17,6 +17,7 @@ export const FeedView: React.FC = () => {
 
   const categories: { id: CategoryType; label: string; icon: string; count?: number }[] = [
     { id: 'all', label: 'Все записи', icon: '🔥' },
+    { id: 'events', label: '🎉 События & Субботники', icon: '🎉' },
     { id: 'urgent', label: '🚨 Важное и Инциденты', icon: '🚨' },
     { id: 'improvements', label: '🌿 Благоустройство', icon: '🌿' },
     { id: 'general', label: '💬 Общение соседей', icon: '💬' },

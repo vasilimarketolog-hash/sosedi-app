@@ -1,4 +1,4 @@
-export type CategoryType = 'all' | 'urgent' | 'general' | 'improvements' | 'uk_news';
+export type CategoryType = 'all' | 'urgent' | 'general' | 'improvements' | 'uk_news' | 'events';
 
 export interface User {
   id: string;
@@ -14,6 +14,8 @@ export interface User {
   thanksCount: number;
   joinedDate: string;
   bio: string;
+  country?: 'BY' | 'KZ';
+  city?: string;
   phone: string;
 }
 
@@ -101,7 +103,7 @@ export interface MasterService {
 export interface MapMarker {
   id: string;
   title: string;
-  type: 'incident' | 'event' | 'free_item' | 'master' | 'community_spot';
+  type: 'incident' | 'event' | 'free_item' | 'master' | 'community_spot' | 'lost_pet' | 'harvest' | 'sale_item';
   lat: number;
   lng: number;
   description: string;
