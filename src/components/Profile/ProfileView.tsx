@@ -1,20 +1,61 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
-import { ShieldCheck, CheckCircle2, Heart, Award, MapPin, Calendar, Edit3, Sparkles } from 'lucide-react';
+import { ShieldCheck, CheckCircle2, Heart, Award, MapPin, Calendar, Edit3, Sparkles, Camera, Save, X } from 'lucide-react';
 
 export const ProfileView: React.FC = () => {
-  const { user, posts, setIsVerificationModalOpen, currentNeighborhood } = useApp();
+  const { user, setUser, posts, setIsVerificationModalOpen, currentNeighborhood } = useApp();
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(user.name);
+  const [editBio, setEditBio] = useState(user.bio);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const userPosts = posts.filter(p => p.authorId === user.id);
 
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (event.target?.result) {
+        const newAvatarUrl = event.target.result as string;
+        setUser(prev => ({ ...prev, avatar: newAvatarUrl }));
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+    setUser(prev => ({
+      ...prev,
+      name: editName.trim() || prev.name,
+      bio: editBio.trim() || prev.bio,
+    }));
+    setIsEditing(false);
+  };
+
   return (
     <div className="profile-view animate-fade-in">
+      {/* Hidden File Input for Avatar Upload */}
+      <input 
+        type="file" 
+        ref={avatarInputRef}
+        accept="image/*"
+        style={{ display: 'none' }}
+        onChange={handleAvatarUpload}
+      />
+
       {/* Profile Header Card */}
       <div className="profile-card card">
         <div className="profile-hero-bg"></div>
         <div className="profile-body">
-          <div className="avatar-wrapper">
+          <div className="avatar-wrapper" onClick={() => avatarInputRef.current?.click()} title="Нажмите, чтобы загрузить новое фото профиля">
             <img src={user.avatar} alt={user.name} className="profile-avatar" />
+            <div className="avatar-upload-overlay">
+              <Camera size={20} color="#ffffff" />
+            </div>
             {user.verified && <CheckCircle2 size={24} className="verified-badge-icon" />}
           </div>
 
@@ -28,6 +69,14 @@ export const ProfileView: React.FC = () => {
                   Подтвердить адрес
                 </button>
               )}
+
+              <button 
+                className="btn btn-secondary btn-sm edit-profile-btn"
+                onClick={() => setIsEditing(!isEditing)}
+              >
+                <Edit3 size={14} />
+                <span>{isEditing ? 'Отмена' : 'Изменить'}</span>
+              </button>
             </div>
 
             <div className="profile-address">
@@ -35,7 +84,50 @@ export const ProfileView: React.FC = () => {
               <span>{user.address} (Подъезд {user.entrance}, кв. {user.apartment})</span>
             </div>
 
-            <p className="profile-bio">{user.bio}</p>
+            {/* Edit Form or Bio Text */}
+            {isEditing ? (
+              <form onSubmit={handleSaveProfile} className="edit-profile-form">
+                <div className="form-group">
+                  <label>Ваше Имя и Фамилия</label>
+                  <input 
+                    type="text" 
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Загрузка фото профиля</label>
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary btn-sm upload-photo-btn"
+                    onClick={() => avatarInputRef.current?.click()}
+                  >
+                    <Camera size={16} />
+                    <span>Выбрать фото из галереи</span>
+                  </button>
+                </div>
+
+                <div className="form-group">
+                  <label>О себе / Описание профиля</label>
+                  <textarea 
+                    rows={2}
+                    value={editBio}
+                    onChange={(e) => setEditBio(e.target.value)}
+                  />
+                </div>
+
+                <div className="flex-row">
+                  <button type="submit" className="btn btn-primary btn-sm">
+                    <Save size={14} /> Сохранить изменения
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <p className="profile-bio">{user.bio}</p>
+            )}
+
             <div className="profile-joined">
               <Calendar size={14} /> Участник сообщества {currentNeighborhood.name} с {user.joinedDate}
             </div>
@@ -114,6 +206,7 @@ export const ProfileView: React.FC = () => {
 
         .avatar-wrapper {
           position: relative;
+          cursor: pointer;
         }
 
         .profile-avatar {
@@ -123,6 +216,23 @@ export const ProfileView: React.FC = () => {
           object-fit: cover;
           border: 4px solid #ffffff;
           box-shadow: var(--shadow-md);
+          display: block;
+        }
+
+        .avatar-upload-overlay {
+          position: absolute;
+          inset: 0;
+          border-radius: 50%;
+          background: rgba(0, 0, 0, 0.45);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          opacity: 0;
+          transition: opacity 0.2s ease;
+        }
+
+        .avatar-wrapper:hover .avatar-upload-overlay {
+          opacity: 1;
         }
 
         .verified-badge-icon {
@@ -146,12 +256,32 @@ export const ProfileView: React.FC = () => {
           display: flex;
           align-items: center;
           gap: 12px;
+          flex-wrap: wrap;
         }
 
         .profile-name-row h2 {
           font-size: 1.35rem;
           font-weight: 800;
           color: #0f172a;
+        }
+
+        .edit-profile-btn {
+          margin-left: auto;
+        }
+
+        .edit-profile-form {
+          background: #f8fafc;
+          border: 1px solid #cbd5e1;
+          border-radius: 12px;
+          padding: 14px;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          margin: 8px 0;
+        }
+
+        .upload-photo-btn {
+          width: fit-content;
         }
 
         .profile-address {
@@ -245,6 +375,23 @@ export const ProfileView: React.FC = () => {
           gap: 8px;
           font-size: 0.85rem;
           color: #166534;
+        }
+
+        @media (max-width: 640px) {
+          .profile-body {
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+          }
+          .profile-name-row {
+            justify-content: center;
+          }
+          .edit-profile-btn {
+            margin-left: 0;
+          }
+          .profile-address, .profile-joined {
+            justify-content: center;
+          }
         }
       `}</style>
     </div>
