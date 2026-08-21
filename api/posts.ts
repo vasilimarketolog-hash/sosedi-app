@@ -50,14 +50,22 @@ export default async function handler(req: any, res: any) {
           }
         });
 
+        const getPostTime = (p: any): number => {
+          if (!p || !p.id) return 0;
+          const match = p.id.match(/\d+/);
+          if (match) {
+            const num = parseInt(match[0], 10);
+            if (num > 100000000) return num;
+            return 100000 - num;
+          }
+          return 0;
+        };
+
         const mergedPosts = Array.from(postMap.values());
         mergedPosts.sort((a: any, b: any) => {
-          if (a.id.startsWith('p_') && b.id.startsWith('p_')) {
-            return b.id.localeCompare(a.id);
-          }
-          if (a.id.startsWith('p_')) return -1;
-          if (b.id.startsWith('p_')) return 1;
-          return 0;
+          if (a.pinned && !b.pinned) return -1;
+          if (!a.pinned && b.pinned) return 1;
+          return getPostTime(b) - getPostTime(a);
         });
 
         globalPosts = mergedPosts.slice(0, 50);
