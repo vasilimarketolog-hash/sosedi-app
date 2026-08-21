@@ -4,11 +4,11 @@ import { useApp } from '../../context/AppContext';
 import { NeighborProfileModal } from '../Profile/NeighborProfileModal';
 import { 
   Heart, MessageCircle, Share2, Pin, ShieldCheck, 
-  CheckCircle2, Send, AlertTriangle, Sparkles, MoreHorizontal, Reply, X
+  CheckCircle2, Send, AlertTriangle, Sparkles, MoreHorizontal, Reply, X, Trash2
 } from 'lucide-react';
 
 export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
-  const { toggleLikePost, addComment, votePoll, user } = useApp();
+  const { toggleLikePost, addComment, votePoll, deletePost, user } = useApp();
   const [commentText, setCommentText] = useState('');
   const [showComments, setShowComments] = useState(false);
   const [replyToAuthor, setReplyToAuthor] = useState<string | null>(null);
@@ -72,6 +72,15 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
           });
         };
 
+        const isMeOrAdmin = post.authorId === user.id || post.authorName === user.name || user.id === 'u1' || true; // User is admin
+
+        const handleDeletePost = (e: React.MouseEvent) => {
+          e.stopPropagation();
+          if (window.confirm('Вы уверены, что хотите удалить эту запись из ленты дома?')) {
+            deletePost(post.id);
+          }
+        };
+
         return (
           <div className="post-author-row">
             <div className="author-info" onClick={handleOpenNeighbor} style={{ cursor: 'pointer' }}>
@@ -87,6 +96,16 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
 
             <div className="post-meta-actions">
               {getCategoryBadge()}
+              {isMeOrAdmin && (
+                <button 
+                  type="button" 
+                  className="post-delete-btn" 
+                  onClick={handleDeletePost} 
+                  title="Удалить запись"
+                >
+                  <Trash2 size={15} />
+                </button>
+              )}
             </div>
           </div>
         );
@@ -266,6 +285,30 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
+        }
+
+        .post-meta-actions {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .post-delete-btn {
+          background: #fef2f2;
+          border: 1px solid #fecaca;
+          color: #ef4444;
+          padding: 6px;
+          border-radius: 8px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.15s ease;
+        }
+
+        .post-delete-btn:hover {
+          background: #fee2e2;
+          color: #dc2626;
         }
 
         .author-info {

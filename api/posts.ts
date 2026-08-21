@@ -25,31 +25,6 @@ export default async function handler(req: any, res: any) {
       const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
       
       if (body && Array.isArray(body.posts)) {
-        const postMap = new Map();
-
-        // 1. Add existing global server posts first
-        globalPosts.forEach((p: any) => postMap.set(p.id, p));
-
-        // 2. Merge incoming posts from device
-        body.posts.forEach((incoming: any) => {
-          const existing = postMap.get(incoming.id);
-          if (!existing) {
-            postMap.set(incoming.id, incoming);
-          } else {
-            // Smart comment union merge
-            const commentMap = new Map();
-            (existing.comments || []).forEach((c: any) => commentMap.set(c.id, c));
-            (incoming.comments || []).forEach((c: any) => commentMap.set(c.id, c));
-
-            postMap.set(incoming.id, {
-              ...existing,
-              ...incoming,
-              likes: Math.max(existing.likes || 0, incoming.likes || 0),
-              comments: Array.from(commentMap.values()),
-            });
-          }
-        });
-
         const getPostTime = (p: any): number => {
           if (!p || !p.id) return 0;
           const matches = p.id.match(/\d+/g);
@@ -65,14 +40,48 @@ export default async function handler(req: any, res: any) {
           return 0;
         };
 
-        const mergedPosts = Array.from(postMap.values());
-        mergedPosts.sort((a: any, b: any) => {
-          if (a.pinned && !b.pinned) return -1;
-          if (!a.pinned && b.pinned) return 1;
-          return getPostTime(b) - getPostTime(a);
-        });
+        if (body.isDelete) {
+          const mergedPosts = [...body.posts];
+          mergedPosts.sort((a: any, b: any) => {
+            if (a.pinned && !b.pinned) return -1;
+            if (!a.pinned && b.pinned) return 1;
+            return getPostTime(b) - getPostTime(a);
+          });
+          globalPosts = mergedPosts.slice(0, 50);
+        } else {
+          const postMap = new Map();
 
-        globalPosts = mergedPosts.slice(0, 50);
+          // 1. Add existing global server posts first
+          globalPosts.forEach((p: any) => postMap.set(p.id, p));
+
+          // 2. Merge incoming posts from device
+          body.posts.forEach((incoming: any) => {
+            const existing = postMap.get(incoming.id);
+            if (!existing) {
+              postMap.set(incoming.id, incoming);
+            } else {
+              const commentMap = new Map();
+              (existing.comments || []).forEach((c: any) => commentMap.set(c.id, c));
+              (incoming.comments || []).forEach((c: any) => commentMap.set(c.id, c));
+
+              postMap.set(incoming.id, {
+                ...existing,
+                ...incoming,
+                likes: Math.max(existing.likes || 0, incoming.likes || 0),
+                comments: Array.from(commentMap.values()),
+              });
+            }
+          });
+
+          const mergedPosts = Array.from(postMap.values());
+          mergedPosts.sort((a: any, b: any) => {
+            if (a.pinned && !b.pinned) return -1;
+            if (!a.pinned && b.pinned) return 1;
+            return getPostTime(b) - getPostTime(a);
+          });
+
+          globalPosts = mergedPosts.slice(0, 50);
+        }
       }
 
       if (body && Array.isArray(body.marketItems)) {

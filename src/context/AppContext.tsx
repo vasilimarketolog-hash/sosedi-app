@@ -36,6 +36,7 @@ interface AppContextType {
 
   posts: Post[];
   addPost: (newPost: Omit<Post, 'id' | 'timestamp' | 'likes' | 'comments'>) => Promise<void>;
+  deletePost: (postId: string) => Promise<void>;
   toggleLikePost: (postId: string) => void;
   addComment: (postId: string, content: string, replyToUser?: string) => void;
   votePoll: (postId: string, optionId: string) => void;
@@ -257,6 +258,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await syncPostsToCloud(updated, marketItems);
   };
 
+  const deletePost = async (postId: string): Promise<void> => {
+    const updated = posts.filter(p => p.id !== postId);
+    setPosts(updated);
+    try {
+      localStorage.setItem('sosedi_posts', JSON.stringify(updated));
+    } catch (e) {
+      console.warn('LocalStorage error in deletePost', e);
+    }
+    await syncPostsToCloud(updated, marketItems, true);
+  };
+
   const toggleLikePost = (postId: string) => {
     setPosts(prev => {
       const updated = prev.map(p => {
@@ -427,6 +439,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setRadiusScope,
       posts,
       addPost,
+      deletePost,
       toggleLikePost,
       addComment,
       votePoll,

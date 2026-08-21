@@ -1,5 +1,4 @@
 import { Post, MarketItem } from '../types';
-import { initialPosts, initialMarketItems } from '../mockData';
 
 const getApiUrl = () => {
   if (typeof window !== 'undefined') {
@@ -31,10 +30,9 @@ export const fetchCloudData = async (): Promise<CloudStoreData | null> => {
   }
 };
 
-export const syncPostsToCloud = async (posts: Post[], marketItems: MarketItem[]): Promise<void> => {
+export const syncPostsToCloud = async (posts: Post[], marketItems: MarketItem[], isDelete = false): Promise<void> => {
   try {
     const sanitizedPosts = posts.slice(0, 40).map(p => {
-      // Ensure avatars & images are clean URLs
       const cleanAvatar = p.authorAvatar?.startsWith('data:')
         ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250'
         : p.authorAvatar;
@@ -50,6 +48,7 @@ export const syncPostsToCloud = async (posts: Post[], marketItems: MarketItem[])
       body: JSON.stringify({
         posts: sanitizedPosts,
         marketItems: marketItems.slice(0, 40),
+        isDelete,
       }),
     });
   } catch (err) {
