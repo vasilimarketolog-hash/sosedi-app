@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { 
-  Building2, ShieldCheck, MapPin, Search, PlusCircle, 
-  Bell, ChevronDown, CheckCircle2, UserCheck, AlertTriangle, Sparkles, UserPlus
+  Building2, MapPin, PlusCircle, MessageSquare, 
+  ChevronDown, CheckCircle2, UserPlus, User
 } from 'lucide-react';
 import { RadiusScope } from '../context/AppContext';
 import { RegistrationModal } from './Auth/RegistrationModal';
@@ -13,30 +13,24 @@ export const Header: React.FC = () => {
     currentNeighborhood, 
     setCurrentNeighborhood, 
     availableNeighborhoods,
-    radiusScope,
-    setRadiusScope,
     setIsVerificationModalOpen,
     setIsCreatePostModalOpen,
     setIsCreateMarketModalOpen,
     setIsRegisteringView,
-    activeTab
+    activeTab,
+    setActiveTab
   } = useApp();
 
   const [isNeighborhoodMenuOpen, setIsNeighborhoodMenuOpen] = useState(false);
-  const [isScopeMenuOpen, setIsScopeMenuOpen] = useState(false);
   const [isRegModalOpen, setIsRegModalOpen] = useState(false);
 
   const neighborhoodRef = useRef<HTMLDivElement>(null);
-  const scopeRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown menus when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (neighborhoodRef.current && !neighborhoodRef.current.contains(event.target as Node)) {
         setIsNeighborhoodMenuOpen(false);
-      }
-      if (scopeRef.current && !scopeRef.current.contains(event.target as Node)) {
-        setIsScopeMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -45,25 +39,18 @@ export const Header: React.FC = () => {
     };
   }, []);
 
-  const scopeLabels: Record<RadiusScope, string> = {
-    house: 'Только мой дом',
-    complex: 'Мой ЖК (все корпуса)',
-    district: 'Микрорайон (1.5 км)',
-    city: 'Весь район'
-  };
-
   return (
     <header className="sticky-header">
       <div className="header-container">
-        {/* Brand & Neighborhood Selector */}
+        {/* Brand Section */}
         <div className="brand-section">
-          <div className="logo-box">
+          <div className="logo-box" onClick={() => setActiveTab('feed')} style={{ cursor: 'pointer' }}>
             <div className="logo-icon">
               <Building2 size={24} color="#ffffff" />
             </div>
             <div className="logo-text-group">
               <span className="logo-title">Соседи<span className="logo-accent">.Онлайн</span></span>
-              <span className="logo-subtitle">🇧🇾 Беларусь • 🇰🇿 Казахстан</span>
+              <span className="logo-subtitle">🇧🇾 Сообщество жильцов</span>
             </div>
           </div>
 
@@ -103,52 +90,36 @@ export const Header: React.FC = () => {
           </div>
         </div>
 
-        {/* Action Buttons & User Verification / Registration */}
+        {/* Action Buttons & User Profile */}
         <div className="actions-section">
-          {/* Country Flag Badge */}
-          {user.country && (
-            <span className="country-badge-flag" title={user.country === 'BY' ? 'Республика Беларусь' : 'Республика Казахстан'}>
-              {user.country === 'BY' ? '🇧🇾 РБ' : '🇰🇿 РК'}
-            </span>
-          )}
-
-          {/* Verification Status */}
-          {user.verified ? (
-            <div className="verified-badge-pill" title={user.verifiedMethod}>
-              <ShieldCheck size={16} className="text-blue" />
-              <span>Проверенный сосед</span>
-            </div>
-          ) : (
-            <button 
-              className="unverified-btn-pill"
-              onClick={() => setIsVerificationModalOpen(true)}
-            >
-              <AlertTriangle size={15} className="text-amber" />
-              <span>Подтвердить адрес</span>
-            </button>
-          )}
-
           {/* Registration Button */}
           <button 
             className="btn btn-secondary reg-nav-btn"
             onClick={() => setIsRegisteringView(true)}
+            title="Зарегистрироваться"
           >
             <UserPlus size={16} />
-            <span>Регистрация</span>
+            <span className="btn-label-desktop">Регистрация</span>
           </button>
 
-          {/* Quick Create Buttons */}
-          {activeTab === 'market' ? (
-            <button className="btn btn-primary" onClick={() => setIsCreateMarketModalOpen(true)}>
-              <PlusCircle size={18} />
-              <span>Подать объявление</span>
-            </button>
-          ) : (
-            <button className="btn btn-primary" onClick={() => setIsCreatePostModalOpen(true)}>
-              <PlusCircle size={18} />
-              <span>Написать соседям</span>
-            </button>
-          )}
+          {/* Quick Create Button (Message icon on mobile, text on desktop) */}
+          <button 
+            className="btn btn-primary write-btn" 
+            onClick={() => activeTab === 'market' ? setIsCreateMarketModalOpen(true) : setIsCreatePostModalOpen(true)}
+            title="Написать сообщение соседям"
+          >
+            <MessageSquare size={18} />
+            <span className="btn-label-desktop">Написать</span>
+          </button>
+
+          {/* User Profile Avatar Button on Far Right */}
+          <button 
+            className={`header-profile-btn ${activeTab === 'profile' ? 'active' : ''}`}
+            onClick={() => setActiveTab('profile')}
+            title="Мой профиль и настройки"
+          >
+            <img src={user.avatar} alt={user.name} className="header-avatar-img" />
+          </button>
         </div>
       </div>
 
@@ -174,13 +145,13 @@ export const Header: React.FC = () => {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          gap: 16px;
+          gap: 12px;
         }
 
         .brand-section {
           display: flex;
           align-items: center;
-          gap: 20px;
+          gap: 16px;
         }
 
         .logo-box {
@@ -198,6 +169,7 @@ export const Header: React.FC = () => {
           align-items: center;
           justify-content: center;
           box-shadow: 0 4px 10px rgba(5, 150, 105, 0.3);
+          flex-shrink: 0;
         }
 
         .logo-text-group {
@@ -207,9 +179,10 @@ export const Header: React.FC = () => {
 
         .logo-title {
           font-weight: 800;
-          font-size: 1.25rem;
+          font-size: 1.2rem;
           color: #0f172a;
           letter-spacing: -0.02em;
+          white-space: nowrap;
         }
 
         .logo-accent {
@@ -245,34 +218,7 @@ export const Header: React.FC = () => {
         }
 
         .text-emerald { color: #059669; }
-        .text-blue { color: #0284c7; }
-        .text-amber { color: #d97706; }
         .text-muted { color: #94a3b8; }
-
-        .scope-selector-btn {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 7px 12px;
-          background: #ffffff;
-          border: 1px solid #cbd5e1;
-          border-radius: 20px;
-          font-size: 0.82rem;
-          font-weight: 600;
-          color: #334155;
-        }
-
-        .scope-selector-btn:hover {
-          border-color: #059669;
-        }
-
-        .scope-dot {
-          width: 8px;
-          height: 8px;
-          border-radius: 50%;
-          background: #059669;
-          box-shadow: 0 0 6px rgba(5, 150, 105, 0.5);
-        }
 
         .dropdown-menu {
           position: absolute;
@@ -334,48 +280,7 @@ export const Header: React.FC = () => {
         .actions-section {
           display: flex;
           align-items: center;
-          gap: 12px;
-        }
-
-        .country-badge-flag {
-          background: #f1f5f9;
-          border: 1px solid #cbd5e1;
-          padding: 4px 10px;
-          border-radius: 16px;
-          font-size: 0.8rem;
-          font-weight: 700;
-          color: #334155;
-        }
-
-        .verified-badge-pill {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          padding: 7px 14px;
-          background: #f0f9ff;
-          border: 1px solid #bae6fd;
-          border-radius: 20px;
-          color: #0284c7;
-          font-weight: 600;
-          font-size: 0.82rem;
-        }
-
-        .unverified-btn-pill {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          padding: 7px 14px;
-          background: #fffbeb;
-          border: 1px solid #fde68a;
-          border-radius: 20px;
-          color: #b45309;
-          font-weight: 600;
-          font-size: 0.82rem;
-          transition: all 0.2s ease;
-        }
-
-        .unverified-btn-pill:hover {
-          background: #fef3c7;
+          gap: 8px;
         }
 
         .reg-nav-btn {
@@ -386,14 +291,43 @@ export const Header: React.FC = () => {
           background: #ecfdf5;
         }
 
+        .write-btn {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .header-profile-btn {
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          padding: 0;
+          border: 2px solid #e2e8f0;
+          background: #ffffff;
+          overflow: hidden;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          flex-shrink: 0;
+        }
+
+        .header-profile-btn:hover, .header-profile-btn.active {
+          border-color: #059669;
+          transform: scale(1.05);
+        }
+
+        .header-avatar-img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
         @media (max-width: 768px) {
           .dropdown-wrapper { display: none; }
-          .country-badge-flag { display: none; }
-          .verified-badge-pill span, .unverified-btn-pill span { display: none; }
-          .verified-badge-pill, .unverified-btn-pill { padding: 6px 8px; }
-          .reg-nav-btn span { display: none; }
+          .logo-subtitle { display: none; }
+          .btn-label-desktop { display: none; }
           .reg-nav-btn { padding: 8px 10px; }
-          .header-container { padding: 8px 10px; gap: 8px; }
+          .write-btn { padding: 8px 12px; border-radius: 20px; }
+          .header-container { padding: 8px 12px; gap: 8px; }
           .brand-section { gap: 6px; }
           .actions-section { gap: 6px; }
         }
