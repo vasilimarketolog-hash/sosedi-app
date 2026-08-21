@@ -53,6 +53,7 @@ interface AppContextType {
   activeChatId: string;
   setActiveChatId: (id: string) => void;
   sendMessageToChat: (chatId: string, text: string) => void;
+  openDirectChat: (authorName: string, authorAvatar?: string, authorAddress?: string) => void;
 
   mapMarkers: MapMarker[];
   completeVerification: (address?: string, building?: string, entrance?: number, apartment?: number) => void;
@@ -351,6 +352,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }));
   };
 
+  const openDirectChat = (authorName: string, authorAvatar?: string, authorAddress?: string) => {
+    const chatId = `chat_dm_${authorName.replace(/\s+/g, '_')}`;
+    const existing = chats.find(c => c.id === chatId);
+
+    if (!existing) {
+      const newDirectChat: HouseChat = {
+        id: chatId,
+        name: authorName,
+        description: `Личный диалог с соседом (${authorAddress || 'соседний дом'})`,
+        icon: '💬',
+        membersCount: 2,
+        unreadCount: 0,
+        type: 'direct',
+        participantAvatar: authorAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
+        participantAddress: authorAddress,
+        messages: [
+          {
+            id: `msg_dm_init_${Date.now()}`,
+            senderId: 'system',
+            senderName: 'Соседи.Онлайн',
+            senderAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
+            senderAddress: 'Система',
+            verified: true,
+            text: `Вы начали личный диалог с соседом ${authorName}. Напишите сообщение ниже.`,
+            timestamp: 'Только что',
+          }
+        ]
+      };
+      setChats(prev => [newDirectChat, ...prev]);
+    }
+
+    setActiveChatId(chatId);
+    setActiveTab('chats');
+  };
+
   const completeVerification = (address?: string, building?: string, entrance?: number, apartment?: number) => {
     setUser(prev => ({
       ...prev,
@@ -393,6 +429,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       activeChatId,
       setActiveChatId,
       sendMessageToChat,
+      openDirectChat,
       mapMarkers,
       completeVerification,
       isVerificationModalOpen,

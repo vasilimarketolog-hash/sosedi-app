@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Post } from '../../types';
 import { useApp } from '../../context/AppContext';
+import { NeighborProfileModal } from '../Profile/NeighborProfileModal';
 import { 
   Heart, MessageCircle, Share2, Pin, ShieldCheck, 
   CheckCircle2, Send, AlertTriangle, Sparkles, MoreHorizontal, Reply, X
@@ -11,6 +12,7 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
   const [commentText, setCommentText] = useState('');
   const [showComments, setShowComments] = useState(false);
   const [replyToAuthor, setReplyToAuthor] = useState<string | null>(null);
+  const [selectedNeighbor, setSelectedNeighbor] = useState<{ name: string; avatar: string; address?: string; verified?: boolean } | null>(null);
   const commentInputRef = useRef<HTMLInputElement>(null);
 
   const handleStartReply = (authorName: string) => {
@@ -61,16 +63,25 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
         const displayAvatar = isMe ? user.avatar : post.authorAvatar;
         const displayName = isMe ? user.name : post.authorName;
 
+        const handleOpenNeighbor = () => {
+          setSelectedNeighbor({
+            name: displayName,
+            avatar: displayAvatar,
+            address: post.authorAddress,
+            verified: post.verified,
+          });
+        };
+
         return (
           <div className="post-author-row">
-            <div className="author-info">
+            <div className="author-info" onClick={handleOpenNeighbor} style={{ cursor: 'pointer' }}>
               <img src={displayAvatar} alt={displayName} className="author-avatar" />
               <div>
                 <div className="author-name-group">
                   <span className="author-name">{displayName}</span>
                   <span title="Проверенный жилец дома"><CheckCircle2 size={15} className="text-blue" /></span>
                 </div>
-                <div className="author-address">{post.authorAddress} • {post.timestamp}</div>
+                <div className="author-timestamp-sub">{post.timestamp}</div>
               </div>
             </div>
 
@@ -222,6 +233,13 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
           </form>
         </div>
       )}
+
+      {/* Neighbor Profile Modal */}
+      <NeighborProfileModal 
+        isOpen={!!selectedNeighbor} 
+        onClose={() => setSelectedNeighbor(null)} 
+        neighbor={selectedNeighbor || { name: '', avatar: '' }} 
+      />
 
       <style>{`
         .post-card {

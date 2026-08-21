@@ -3,7 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { Wrench, Phone, Star, ShieldCheck, CheckCircle2, Search, MapPin, Award } from 'lucide-react';
 
 export const MastersView: React.FC = () => {
-  const { masters, masterCategoryFilter, setMasterCategoryFilter } = useApp();
+  const { masters, masterCategoryFilter, setMasterCategoryFilter, openDirectChat } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeContactPhone, setActiveContactPhone] = useState<string | null>(null);
 
@@ -105,16 +105,24 @@ export const MastersView: React.FC = () => {
             </div>
 
             {/* Action Footer */}
-            <div className="master-footer">
+            <div className="master-footer" style={{ display: 'flex', gap: '8px' }}>
+              <button 
+                className="btn btn-primary" 
+                style={{ flex: 1 }}
+                onClick={() => openDirectChat(m.name, m.avatar, m.address)}
+              >
+                💬 Написать в ЛС
+              </button>
+
               {activeContactPhone === m.id ? (
-                <div className="phone-revealed-box">
+                <div className="phone-revealed-box" style={{ flex: 1, justifyContent: 'center' }}>
                   <Phone size={16} />
                   <span>{m.phone}</span>
                 </div>
               ) : (
-                <button className="btn btn-primary w-full" onClick={() => setActiveContactPhone(m.id)}>
+                <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setActiveContactPhone(m.id)}>
                   <Phone size={16} />
-                  <span>Показать телефон и связаться</span>
+                  <span>Телефон</span>
                 </button>
               )}
             </div>

@@ -132,7 +132,9 @@ export interface HouseChat {
   icon: string;
   membersCount: number;
   unreadCount: number;
-  type: 'house' | 'entrance' | 'auto' | 'pets' | 'moms';
+  type: 'house' | 'entrance' | 'auto' | 'pets' | 'moms' | 'direct';
+  participantAvatar?: string;
+  participantAddress?: string;
   messages: ChatMessage[];
 }
 

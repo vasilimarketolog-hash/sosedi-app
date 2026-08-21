@@ -2,15 +2,21 @@ import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { 
   Building2, DoorOpen, Car, Dog, Send, 
-  CheckCircle2, Users, ShieldAlert, Sparkles, MessageSquare, ArrowLeft
+  CheckCircle2, Users, ShieldAlert, Sparkles, MessageSquare, ArrowLeft, User
 } from 'lucide-react';
 
 export const HouseChatsView: React.FC = () => {
   const { chats, activeChatId, setActiveChatId, sendMessageToChat, user, setIsVerificationModalOpen } = useApp();
   const [inputText, setInputText] = useState('');
   const [mobileShowChat, setMobileShowChat] = useState(false);
+  const [chatFilterTab, setChatFilterTab] = useState<'all' | 'direct'>('all');
 
   const activeChat = chats.find(c => c.id === activeChatId) || chats[0];
+
+  const filteredChats = chats.filter(c => {
+    if (chatFilterTab === 'direct') return c.type === 'direct';
+    return true;
+  });
 
   const handleSelectChat = (id: string) => {
     setActiveChatId(id);
@@ -32,12 +38,16 @@ export const HouseChatsView: React.FC = () => {
     }, 1500);
   };
 
-  const getChatIcon = (type: string) => {
-    switch (type) {
+  const getChatIcon = (chat: any) => {
+    if (chat.type === 'direct' && chat.participantAvatar) {
+      return <img src={chat.participantAvatar} alt={chat.name} className="direct-avatar-icon" />;
+    }
+    switch (chat.type) {
       case 'house': return <Building2 size={20} className="text-emerald" />;
       case 'entrance': return <DoorOpen size={20} className="text-blue" />;
       case 'auto': return <Car size={20} className="text-amber" />;
       case 'pets': return <Dog size={20} className="text-purple" />;
+      case 'direct': return <MessageSquare size={20} className="text-emerald" />;
       default: return <MessageSquare size={20} />;
     }
   };
@@ -48,26 +58,50 @@ export const HouseChatsView: React.FC = () => {
       <div className={`chats-sidebar ${mobileShowChat ? 'mobile-hidden' : 'mobile-active'}`}>
         <div className="chats-sidebar-header">
           <h3>Чаты нашего ЖК</h3>
-          <span className="members-total">{user.building}</span>
+
+          <div className="chat-tab-pills">
+            <button 
+              className={`chat-tab-btn ${chatFilterTab === 'all' ? 'active' : ''}`}
+              onClick={() => setChatFilterTab('all')}
+            >
+              Все чаты
+            </button>
+            <button 
+              className={`chat-tab-btn ${chatFilterTab === 'direct' ? 'active' : ''}`}
+              onClick={() => setChatFilterTab('direct')}
+            >
+              💬 Личные (ЛС)
+            </button>
+          </div>
         </div>
 
         <div className="chats-list">
-          {chats.map((chat) => (
-            <button
-              key={chat.id}
-              className={`chat-item-btn ${chat.id === activeChat.id ? 'active' : ''}`}
-              onClick={() => handleSelectChat(chat.id)}
-            >
-              <div className="chat-item-icon">{getChatIcon(chat.type)}</div>
-              <div className="chat-item-info">
-                <div className="chat-item-name">{chat.name}</div>
-                <div className="chat-item-sub">{chat.membersCount} участников</div>
-              </div>
-              {chat.unreadCount > 0 && (
-                <span className="unread-badge">{chat.unreadCount}</span>
-              )}
-            </button>
-          ))}
+          {filteredChats.length > 0 ? (
+            filteredChats.map((chat) => (
+              <button
+                key={chat.id}
+                className={`chat-item-btn ${chat.id === activeChat.id ? 'active' : ''}`}
+                onClick={() => handleSelectChat(chat.id)}
+              >
+                <div className="chat-item-icon">{getChatIcon(chat)}</div>
+                <div className="chat-item-info">
+                  <div className="chat-item-name">{chat.name}</div>
+                  <div className="chat-item-sub">
+                    {chat.type === 'direct' ? (chat.participantAddress || 'Личный диалог') : `${chat.membersCount} участников`}
+                  </div>
+                </div>
+                {chat.unreadCount > 0 && (
+                  <span className="unread-badge">{chat.unreadCount}</span>
+                )}
+              </button>
+            ))
+          ) : (
+            <div className="empty-chats-notice">
+              <MessageSquare size={32} className="text-muted" />
+              <p>У вас пока нет личных диалогов</p>
+              <span className="sub-notice">Нажмите на имя любого соседа под постом, чтобы написать в ЛС.</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -78,16 +112,17 @@ export const HouseChatsView: React.FC = () => {
           <div className="chat-header-info">
             <button className="mobile-back-btn" onClick={() => setMobileShowChat(false)}>
               <ArrowLeft size={18} />
-              <span>Чаты</span>
+              <span>Все чаты</span>
             </button>
             <div className="chat-title-row">
-              {getChatIcon(activeChat.type)}
+              {getChatIcon(activeChat)}
               <h2>{activeChat.name}</h2>
             </div>
             <p className="chat-desc">{activeChat.description}</p>
           </div>
           <div className="members-badge">
-            <Users size={14} /> <span>{activeChat.membersCount}</span>
+            {activeChat.type === 'direct' ? <User size={14} /> : <Users size={14} />} 
+            <span>{activeChat.type === 'direct' ? 'Личный диалог' : `${activeChat.membersCount} участников`}</span>
           </div>
         </div>
 
@@ -158,8 +193,11 @@ export const HouseChatsView: React.FC = () => {
         }
 
         .chats-sidebar-header {
-          padding: 16px;
+          padding: 14px 16px;
           border-bottom: 1px solid var(--border-color);
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
         }
 
         .chats-sidebar-header h3 {
@@ -168,9 +206,31 @@ export const HouseChatsView: React.FC = () => {
           color: #0f172a;
         }
 
-        .members-total {
+        .chat-tab-pills {
+          display: flex;
+          gap: 6px;
+          background: #e2e8f0;
+          padding: 3px;
+          border-radius: 18px;
+        }
+
+        .chat-tab-btn {
+          flex: 1;
+          padding: 5px 8px;
+          border-radius: 16px;
+          border: none;
           font-size: 0.76rem;
-          color: #64748b;
+          font-weight: 700;
+          color: #475569;
+          background: transparent;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+
+        .chat-tab-btn.active {
+          background: #ffffff;
+          color: #059669;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.06);
         }
 
         .chats-list {
@@ -179,6 +239,7 @@ export const HouseChatsView: React.FC = () => {
           padding: 8px;
           gap: 4px;
           overflow-y: auto;
+          flex: 1;
         }
 
         .chat-item-btn {
@@ -196,7 +257,15 @@ export const HouseChatsView: React.FC = () => {
 
         .chat-item-info { flex: 1; min-width: 0; }
         .chat-item-name { font-weight: 700; font-size: 0.88rem; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .chat-item-sub { font-size: 0.74rem; color: #64748b; }
+        .chat-item-sub { font-size: 0.74rem; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .direct-avatar-icon {
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          object-fit: cover;
+          border: 2px solid #059669;
+        }
 
         .unread-badge {
           background: #ef4444;
@@ -206,6 +275,18 @@ export const HouseChatsView: React.FC = () => {
           padding: 2px 8px;
           border-radius: 10px;
         }
+
+        .empty-chats-notice {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
+          padding: 30px 16px;
+          gap: 8px;
+        }
+
+        .empty-chats-notice p { font-weight: 700; font-size: 0.88rem; color: #334155; }
+        .sub-notice { font-size: 0.76rem; color: #64748b; }
 
         .chat-main-area {
           flex: 1;

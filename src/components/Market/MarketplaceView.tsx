@@ -3,7 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { Gift, PlusCircle, CheckCircle2, Tag, Eye, Heart, MessageCircle, MapPin } from 'lucide-react';
 
 export const MarketplaceView: React.FC = () => {
-  const { marketItems, marketFilter, setMarketFilter, setIsCreateMarketModalOpen, user } = useApp();
+  const { marketItems, marketFilter, setMarketFilter, setIsCreateMarketModalOpen, openDirectChat, user } = useApp();
   const [reservedIds, setReservedIds] = useState<string[]>([]);
 
   const filteredItems = marketItems.filter(item => {
@@ -93,10 +93,10 @@ export const MarketplaceView: React.FC = () => {
                 {/* Footer action */}
                 <div className="item-footer">
                   <button 
-                    className={`btn ${isReserved ? 'btn-secondary' : 'btn-primary'} btn-sm w-full`}
-                    onClick={() => handleReserve(item.id)}
+                    className="btn btn-primary btn-sm w-full"
+                    onClick={() => openDirectChat(item.sellerName, item.sellerAvatar, item.sellerAddress)}
                   >
-                    {isReserved ? 'Отменить бронь' : 'Написать продавцу в чат'}
+                    💬 Написать продавцу в ЛС
                   </button>
                 </div>
               </div>
