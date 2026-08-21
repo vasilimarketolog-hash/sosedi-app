@@ -15,6 +15,7 @@ export const CreatePostModal: React.FC = () => {
   const [showPoll, setShowPoll] = useState(false);
   const [pollQuestion, setPollQuestion] = useState('');
   const [pollOptions, setPollOptions] = useState(['Да, поддерживаю', 'Нет, против', 'Уточнить детали']);
+  const [isPublishing, setIsPublishing] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -51,8 +52,6 @@ export const CreatePostModal: React.FC = () => {
       setPollOptions(pollOptions.filter((_, i) => i !== index));
     }
   };
-
-  const [isPublishing, setIsPublishing] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -280,9 +279,9 @@ export const CreatePostModal: React.FC = () => {
           )}
 
           <div className="modal-footer">
-            <button type="submit" className="btn btn-primary w-full">
+            <button type="submit" className="btn btn-primary w-full" disabled={isPublishing}>
               <Send size={16} />
-              <span>Опубликовать во дворе</span>
+              <span>{isPublishing ? 'Публикуется...' : 'Опубликовать во дворе'}</span>
             </button>
           </div>
         </form>
