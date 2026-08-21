@@ -13,6 +13,7 @@ import {
   initialMapMarkers, 
   initialHouseChats 
 } from '../mockData';
+import { fetchCloudData, syncPostsToCloud } from '../services/cloudSync';
 
 export type TabType = 'feed' | 'market' | 'masters' | 'map' | 'chats' | 'profile';
 export type RadiusScope = 'house' | 'complex' | 'district' | 'city';
@@ -117,6 +118,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [user]);
 
+  // Cloud Data Sync Integration
+  useEffect(() => {
+    fetchCloudData().then(cloud => {
+      if (cloud) {
+        if (cloud.posts && cloud.posts.length > 0) setPosts(cloud.posts);
+        if (cloud.marketItems && cloud.marketItems.length > 0) setMarketItems(cloud.marketItems);
+      }
+    });
+
+    const interval = setInterval(() => {
+      fetchCloudData().then(cloud => {
+        if (cloud && cloud.posts && cloud.posts.length > 0) {
+          setPosts(cloud.posts);
+        }
+      });
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   useEffect(() => {
     try {
       localStorage.setItem('sosedi_posts', JSON.stringify(posts));
@@ -150,64 +171,78 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       userLiked: false,
       comments: [],
     };
-    setPosts([newPost, ...posts]);
+    const updated = [newPost, ...posts];
+    setPosts(updated);
+    syncPostsToCloud(updated, marketItems);
   };
 
   const toggleLikePost = (postId: string) => {
-    setPosts(prev => prev.map(p => {
-      if (p.id === postId) {
-        const userLiked = !p.userLiked;
-        return {
-          ...p,
-          userLiked,
-          likes: userLiked ? p.likes + 1 : p.likes - 1,
-        };
-      }
-      return p;
-    }));
+    setPosts(prev => {
+      const updated = prev.map(p => {
+        if (p.id === postId) {
+          const userLiked = !p.userLiked;
+          return {
+            ...p,
+            userLiked,
+            likes: userLiked ? p.likes + 1 : p.likes - 1,
+          };
+        }
+        return p;
+      });
+      syncPostsToCloud(updated, marketItems);
+      return updated;
+    });
   };
 
   const addComment = (postId: string, content: string) => {
     if (!content.trim()) return;
-    setPosts(prev => prev.map(p => {
-      if (p.id === postId) {
-        const newComment = {
-          id: `c_${Date.now()}`,
-          authorName: user.name,
-          authorAvatar: user.avatar,
-          authorAddress: `${user.building}, Подъезд ${user.entrance}`,
-          verified: user.verified,
-          content,
-          timestamp: 'Только что',
-          likes: 0,
-        };
-        return {
-          ...p,
-          comments: [...p.comments, newComment],
-        };
-      }
-      return p;
-    }));
+    setPosts(prev => {
+      const updated = prev.map(p => {
+        if (p.id === postId) {
+          const newComment = {
+            id: `c_${Date.now()}`,
+            authorName: user.name,
+            authorAvatar: user.avatar,
+            authorAddress: `${user.building}, Подъезд ${user.entrance}`,
+            verified: user.verified,
+            content,
+            timestamp: 'Только что',
+            likes: 0,
+          };
+          return {
+            ...p,
+            comments: [...p.comments, newComment],
+          };
+        }
+        return p;
+      });
+      syncPostsToCloud(updated, marketItems);
+      return updated;
+    });
   };
 
   const votePoll = (postId: string, optionId: string) => {
-    setPosts(prev => prev.map(p => {
-      if (p.id === postId && p.poll && !p.poll.userVotedOptionId) {
-        const updatedOptions = p.poll.options.map(opt => 
-          opt.id === optionId ? { ...opt, votes: opt.votes + 1 } : opt
-        );
-        return {
-          ...p,
-          poll: {
-            ...p.poll,
-            options: updatedOptions,
-            totalVotes: p.poll.totalVotes + 1,
-            userVotedOptionId: optionId,
-          }
-        };
-      }
-      return p;
-    }));
+    setPosts(prev => {
+      const updated = prev.map(p => {
+        if (p.id === postId && p.poll && !p.poll.userVotedOptionId) {
+          const updatedOptions = p.poll.options.map(opt => 
+            opt.id === optionId ? { ...opt, votes: opt.votes + 1 } : opt
+          );
+          return {
+            ...p,
+            poll: {
+              ...p.poll,
+              options: updatedOptions,
+              totalVotes: p.poll.totalVotes + 1,
+              userVotedOptionId: optionId,
+            },
+          };
+        }
+        return p;
+      });
+      syncPostsToCloud(updated, marketItems);
+      return updated;
+    });
   };
 
   const addMarketItem = (itemData: Omit<MarketItem, 'id' | 'date' | 'views'>) => {
@@ -217,7 +252,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       date: 'Только что',
       views: 1,
     };
-    setMarketItems([newItem, ...marketItems]);
+    const updated = [newItem, ...marketItems];
+    setMarketItems(updated);
+    syncPostsToCloud(posts, updated);
   };
 
   const sendMessageToChat = (chatId: string, text: string) => {
