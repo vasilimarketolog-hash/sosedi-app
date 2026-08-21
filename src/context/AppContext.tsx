@@ -35,7 +35,7 @@ interface AppContextType {
   setRadiusScope: (scope: RadiusScope) => void;
 
   posts: Post[];
-  addPost: (newPost: Omit<Post, 'id' | 'timestamp' | 'likes' | 'comments'>) => void;
+  addPost: (newPost: Omit<Post, 'id' | 'timestamp' | 'likes' | 'comments'>) => Promise<void>;
   toggleLikePost: (postId: string) => void;
   addComment: (postId: string, content: string) => void;
   votePoll: (postId: string, optionId: string) => void;
@@ -127,13 +127,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (cloud.posts && cloud.posts.length > 0) {
         setPosts(prev => {
           const map = new Map<string, Post>();
-          // Preserve all local posts first
+          // Preserve local posts first
           prev.forEach(p => map.set(p.id, p));
           // Merge in new cloud posts
           cloud.posts.forEach(p => {
             if (!map.has(p.id)) map.set(p.id, p);
           });
-          return Array.from(map.values());
+          const all = Array.from(map.values());
+          // Sort newest posts (higher timestamp ID p_...) first
+          all.sort((a, b) => {
+            if (a.id.startsWith('p_') && b.id.startsWith('p_')) {
+              return b.id.localeCompare(a.id);
+            }
+            if (a.id.startsWith('p_')) return -1;
+            if (b.id.startsWith('p_')) return 1;
+            return 0;
+          });
+          return all;
         });
       }
 
@@ -178,7 +188,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [chats]);
 
-  const addPost = (newPostData: Omit<Post, 'id' | 'timestamp' | 'likes' | 'comments'>) => {
+  const addPost = async (newPostData: Omit<Post, 'id' | 'timestamp' | 'likes' | 'comments'>): Promise<void> => {
     const newPost: Post = {
       ...newPostData,
       id: `p_${Date.now()}`,
@@ -189,7 +199,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     const updated = [newPost, ...posts];
     setPosts(updated);
-    syncPostsToCloud(updated, marketItems);
+    await syncPostsToCloud(updated, marketItems);
   };
 
   const toggleLikePost = (postId: string) => {

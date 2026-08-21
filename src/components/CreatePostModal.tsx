@@ -52,9 +52,11 @@ export const CreatePostModal: React.FC = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [isPublishing, setIsPublishing] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!content.trim()) return;
+    if (!content.trim() || isPublishing) return;
 
     let pollData;
     if (showPoll && pollQuestion.trim()) {
@@ -74,27 +76,34 @@ export const CreatePostModal: React.FC = () => {
     const allImages = [...attachedFiles.map(f => f.url)];
     if (imageUrl.trim()) allImages.push(imageUrl.trim());
 
-    addPost({
-      authorId: user.id,
-      authorName: user.name,
-      authorAvatar: user.avatar,
-      authorAddress: `${user.building}, Подъезд ${user.entrance}`,
-      verified: user.verified,
-      category,
-      title: title.trim() || undefined,
-      content,
-      images: allImages.length > 0 ? allImages : undefined,
-      poll: pollData,
-      tags: category === 'urgent' ? ['Срочно', 'Внимание'] : category === 'events' ? ['Событие во дворе'] : undefined,
-    });
+    setIsPublishing(true);
 
-    setIsCreatePostModalOpen(false);
-    // Reset form
-    setTitle('');
-    setContent('');
-    setImageUrl('');
-    setAttachedFiles([]);
-    setShowPoll(false);
+    try {
+      await addPost({
+        authorId: user.id,
+        authorName: user.name,
+        authorAvatar: user.avatar,
+        authorAddress: `${user.building}, Подъезд ${user.entrance}`,
+        verified: user.verified,
+        category,
+        title: title.trim() || undefined,
+        content,
+        images: allImages.length > 0 ? allImages : undefined,
+        poll: pollData,
+        tags: category === 'urgent' ? ['Срочно', 'Внимание'] : category === 'events' ? ['Событие во дворе'] : undefined,
+      });
+    } catch (err) {
+      console.warn('Error publishing post:', err);
+    } finally {
+      setIsPublishing(false);
+      setIsCreatePostModalOpen(false);
+      // Reset form
+      setTitle('');
+      setContent('');
+      setImageUrl('');
+      setAttachedFiles([]);
+      setShowPoll(false);
+    }
   };
 
   return (
