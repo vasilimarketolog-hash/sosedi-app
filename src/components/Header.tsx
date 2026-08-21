@@ -103,39 +103,6 @@ export const Header: React.FC = () => {
           </div>
         </div>
 
-        {/* Scope Radius Selector */}
-        <div className="scope-section">
-          <div className="dropdown-wrapper" ref={scopeRef}>
-            <button 
-              className="scope-selector-btn"
-              onClick={() => setIsScopeMenuOpen(!isScopeMenuOpen)}
-            >
-              <span className="scope-dot"></span>
-              <span className="scope-text">{scopeLabels[radiusScope]}</span>
-              <ChevronDown size={14} />
-            </button>
-
-            {isScopeMenuOpen && (
-              <div className="dropdown-menu scope-menu">
-                <div className="dropdown-header">Радиус видимости записей</div>
-                {(['house', 'complex', 'district', 'city'] as RadiusScope[]).map((scope) => (
-                  <button
-                    key={scope}
-                    className={`dropdown-item ${scope === radiusScope ? 'active' : ''}`}
-                    onClick={() => {
-                      setRadiusScope(scope);
-                      setIsScopeMenuOpen(false);
-                    }}
-                  >
-                    <span>{scopeLabels[scope]}</span>
-                    {scope === radiusScope && <CheckCircle2 size={16} className="text-emerald" />}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
         {/* Action Buttons & User Verification / Registration */}
         <div className="actions-section">
           {/* Country Flag Badge */}

@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { CategoryType } from '../types';
-import { X, Image, BarChart2, AlertTriangle, Send, Plus, Trash2, Calendar } from 'lucide-react';
+import { X, Image as ImageIcon, Video, BarChart2, AlertTriangle, Send, Plus, Trash2, Calendar, Paperclip, Check } from 'lucide-react';
 
 export const CreatePostModal: React.FC = () => {
   const { isCreatePostModalOpen, setIsCreatePostModalOpen, addPost, user } = useApp();
@@ -10,12 +10,35 @@ export const CreatePostModal: React.FC = () => {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [attachedFiles, setAttachedFiles] = useState<{ url: string; isVideo: boolean }[]>([]);
   
   const [showPoll, setShowPoll] = useState(false);
   const [pollQuestion, setPollQuestion] = useState('');
   const [pollOptions, setPollOptions] = useState(['Да, поддерживаю', 'Нет, против', 'Уточнить детали']);
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   if (!isCreatePostModalOpen) return null;
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    Array.from(files).forEach((file) => {
+      const reader = new FileReader();
+      const isVideo = file.type.startsWith('video/');
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setAttachedFiles(prev => [...prev, { url: event.target!.result as string, isVideo }]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleRemoveFile = (index: number) => {
+    setAttachedFiles(prev => prev.filter((_, i) => i !== index));
+  };
 
   const handleAddPollOption = () => {
     if (pollOptions.length < 6) {
@@ -47,6 +70,10 @@ export const CreatePostModal: React.FC = () => {
       };
     }
 
+    // Combine uploaded files and image URL
+    const allImages = [...attachedFiles.map(f => f.url)];
+    if (imageUrl.trim()) allImages.push(imageUrl.trim());
+
     addPost({
       authorId: user.id,
       authorName: user.name,
@@ -56,7 +83,7 @@ export const CreatePostModal: React.FC = () => {
       category,
       title: title.trim() || undefined,
       content,
-      images: imageUrl ? [imageUrl] : undefined,
+      images: allImages.length > 0 ? allImages : undefined,
       poll: pollData,
       tags: category === 'urgent' ? ['Срочно', 'Внимание'] : category === 'events' ? ['Событие во дворе'] : undefined,
     });
@@ -66,6 +93,7 @@ export const CreatePostModal: React.FC = () => {
     setTitle('');
     setContent('');
     setImageUrl('');
+    setAttachedFiles([]);
     setShowPoll(false);
   };
 
@@ -82,56 +110,27 @@ export const CreatePostModal: React.FC = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="form-body">
+          {/* Dropdown Category Selector */}
           <div className="form-group">
-            <label>Категория сообщения</label>
-            <div className="category-chips">
-              <button 
-                type="button"
-                className={`chip ${category === 'general' ? 'active' : ''}`}
-                onClick={() => setCategory('general')}
-              >
-                💬 Общение
-              </button>
-
-              <button 
-                type="button"
-                className={`chip events ${category === 'events' ? 'active' : ''}`}
-                onClick={() => setCategory('events')}
-              >
-                🎉 Событие / Субботник
-              </button>
-
-              <button 
-                type="button"
-                className={`chip urgent ${category === 'urgent' ? 'active' : ''}`}
-                onClick={() => setCategory('urgent')}
-              >
-                🚨 Срочно / Инцидент
-              </button>
-
-              <button 
-                type="button"
-                className={`chip ${category === 'improvements' ? 'active' : ''}`}
-                onClick={() => setCategory('improvements')}
-              >
-                🌿 Благоустройство
-              </button>
-
-              <button 
-                type="button"
-                className={`chip ${category === 'uk_news' ? 'active' : ''}`}
-                onClick={() => setCategory('uk_news')}
-              >
-                📢 Объявление УК
-              </button>
-            </div>
+            <label>Категория публикации *</label>
+            <select 
+              value={category} 
+              onChange={(e) => setCategory(e.target.value as CategoryType)}
+              className="category-dropdown-select"
+            >
+              <option value="general">💬 Общение соседей</option>
+              <option value="events">🎉 Событие / Праздник / Субботник</option>
+              <option value="urgent">🚨 Срочно / Инцидент / Авария</option>
+              <option value="improvements">🌿 Благоустройство двора</option>
+              <option value="uk_news">📢 Объявление УК / ТСЖ</option>
+            </select>
           </div>
 
           <div className="form-group">
             <label>Заголовок (необязательно)</label>
             <input 
               type="text" 
-              placeholder="Например: Праздник двора / Субботник / Вопрос про парковку"
+              placeholder="Например: Праздник двора / Вопрос про парковку"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
             />
@@ -141,26 +140,68 @@ export const CreatePostModal: React.FC = () => {
             <label>Текст сообщения *</label>
             <textarea 
               rows={4}
-              placeholder="Расскажите подробнее соседям о событии или вопросе..."
+              placeholder="Расскажите подробнее соседям..."
               value={content}
               onChange={(e) => setContent(e.target.value)}
               required
             />
           </div>
 
+          {/* Media Attachments: File upload & URL */}
           <div className="form-group">
-            <label>Ссылка на фото (или прикрепите изображение)</label>
-            <div className="image-input-row">
-              <input 
-                type="url" 
-                placeholder="https://images.unsplash.com/..."
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-              />
-              <button type="button" className="btn btn-secondary" onClick={() => setImageUrl('https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&fit=crop&q=80&w=800')}>
-                Пример
+            <label>Прикрепить фото или видео</label>
+
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              accept="image/*,video/*" 
+              multiple 
+              style={{ display: 'none' }}
+              onChange={handleFileUpload}
+            />
+
+            <div className="media-attach-bar">
+              <button 
+                type="button" 
+                className="btn btn-secondary btn-sm attach-file-btn"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Paperclip size={16} />
+                <span>Загрузить фото/видео из галереи</span>
               </button>
+
+              <div className="image-url-row">
+                <input 
+                  type="url" 
+                  placeholder="Или вставьте ссылку на фото (https://...)"
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                  className="url-input-sm"
+                />
+              </div>
             </div>
+
+            {/* Attached Thumbnails Preview */}
+            {attachedFiles.length > 0 && (
+              <div className="attached-previews-grid">
+                {attachedFiles.map((file, idx) => (
+                  <div key={idx} className="preview-thumb-box">
+                    {file.isVideo ? (
+                      <video src={file.url} className="preview-media" />
+                    ) : (
+                      <img src={file.url} alt="Uploaded preview" className="preview-media" />
+                    )}
+                    <button 
+                      type="button" 
+                      className="remove-thumb-btn"
+                      onClick={() => handleRemoveFile(idx)}
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Poll section toggle */}
@@ -171,7 +212,7 @@ export const CreatePostModal: React.FC = () => {
               onClick={() => setShowPoll(true)}
             >
               <BarChart2 size={16} />
-              <span>Добавить интерактивный опрос соседей</span>
+              <span>Добавить опрос для соседей</span>
             </button>
           ) : (
             <div className="poll-builder">
@@ -184,7 +225,7 @@ export const CreatePostModal: React.FC = () => {
                 <input 
                   type="text" 
                   className="poll-question-input"
-                  placeholder="Тема опроса (например: Нужен ли шлагбаум или посадка туй?)" 
+                  placeholder="Тема опроса (например: Нужен ли шлагбаум?)" 
                   value={pollQuestion}
                   onChange={(e) => setPollQuestion(e.target.value)}
                 />
@@ -239,47 +280,72 @@ export const CreatePostModal: React.FC = () => {
       </div>
 
       <style>{`
-        .category-chips {
+        .category-dropdown-select {
+          font-weight: 700 !important;
+          font-size: 0.92rem !important;
+          padding: 10px 14px !important;
+          background-color: #f8fafc !important;
+          border-color: #cbd5e1 !important;
+        }
+
+        .media-attach-bar {
           display: flex;
-          flex-wrap: wrap;
+          flex-direction: column;
           gap: 8px;
         }
 
-        .chip {
-          padding: 7px 14px;
-          border-radius: 20px;
-          border: 1px solid #cbd5e1;
-          background: #ffffff;
-          font-size: 0.8rem;
+        .attach-file-btn {
+          display: flex;
+          align-items: center;
+          gap: 8px;
           font-weight: 600;
-          color: #475569;
-          transition: all 0.2s ease;
+          font-size: 0.85rem;
+          color: #334155;
+          width: fit-content;
         }
 
-        .chip.active {
-          background: #ecfdf5;
-          border-color: #059669;
-          color: #059669;
+        .url-input-sm {
+          font-size: 0.82rem !important;
+          padding: 6px 12px !important;
         }
 
-        .chip.events.active {
-          background: #f0fdf4;
-          border-color: #10b981;
-          color: #047857;
-        }
-
-        .chip.urgent.active {
-          background: #fef2f2;
-          border-color: #ef4444;
-          color: #ef4444;
-        }
-
-        .image-input-row {
+        .attached-previews-grid {
           display: flex;
           gap: 8px;
+          flex-wrap: wrap;
+          margin-top: 8px;
         }
 
-        .image-input-row input { flex: 1; }
+        .preview-thumb-box {
+          position: relative;
+          width: 70px;
+          height: 70px;
+          border-radius: 8px;
+          overflow: hidden;
+          border: 1px solid #cbd5e1;
+        }
+
+        .preview-media {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .remove-thumb-btn {
+          position: absolute;
+          top: 4px;
+          right: 4px;
+          background: rgba(0, 0, 0, 0.7);
+          color: #ffffff;
+          border: none;
+          border-radius: 50%;
+          width: 20px;
+          height: 20px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+        }
 
         .add-feature-btn {
           display: flex;

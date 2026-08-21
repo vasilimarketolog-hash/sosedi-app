@@ -4,11 +4,11 @@ import { PostCard } from './PostCard';
 import { CategoryType } from '../../types';
 import { 
   Sparkles, AlertCircle, PlusCircle, Filter, 
-  MessageSquare, Flame, ShieldAlert, Heart
+  MessageSquare, Flame, ShieldAlert, Heart, MapPin
 } from 'lucide-react';
 
 export const FeedView: React.FC = () => {
-  const { posts, feedCategory, setFeedCategory, setIsCreatePostModalOpen, user, setIsVerificationModalOpen } = useApp();
+  const { posts, feedCategory, setFeedCategory, setIsCreatePostModalOpen, user, setIsVerificationModalOpen, currentNeighborhood } = useApp();
 
   const filteredPosts = posts.filter(p => {
     if (feedCategory === 'all') return true;
@@ -70,9 +70,39 @@ export const FeedView: React.FC = () => {
       {/* Posts List */}
       <div className="posts-feed-list">
         {filteredPosts.length > 0 ? (
-          filteredPosts.map((post) => (
-            <PostCard key={post.id} post={post} />
-          ))
+          <>
+            {filteredPosts.map((post) => (
+              <PostCard key={post.id} post={post} />
+            ))}
+
+            {/* Smart Nextdoor Neighbor Feed Divider */}
+            <div className="nearby-feed-divider">
+              <div className="divider-line"></div>
+              <div className="divider-badge">
+                <MapPin size={15} className="text-emerald" />
+                <span>Вы прочитали новости {currentNeighborhood.name}. Ниже — из соседнего района:</span>
+              </div>
+              <div className="divider-line"></div>
+            </div>
+
+            <PostCard 
+              post={{
+                id: 'p_nearby_1',
+                authorId: 'u_nearby',
+                authorName: 'Артем Быков',
+                authorAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=250',
+                authorAddress: 'Соседний ЖК «Уручье», д. 8',
+                verified: true,
+                timestamp: '3 часа назад',
+                category: 'improvements',
+                title: '🚲 Велодорожка между микрорайонами и экологический субботник',
+                content: 'Привет соседям из «Новой Боровой»! На следующей неделе районная администрация рассматривает объединение наших велодорожек. Поставьте лайк, если поддерживаете инициативу!',
+                likes: 58,
+                userLiked: false,
+                comments: [],
+              }}
+            />
+          </>
         ) : (
           <div className="empty-feed-card card">
             <MessageSquare size={48} className="text-muted" />
@@ -187,6 +217,33 @@ export const FeedView: React.FC = () => {
           display: flex;
           flex-direction: column;
           gap: 16px;
+        }
+
+        .nearby-feed-divider {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin: 16px 0;
+        }
+
+        .divider-line {
+          flex: 1;
+          height: 1px;
+          background: #e2e8f0;
+        }
+
+        .divider-badge {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          background: #ecfdf5;
+          border: 1px solid #a7f3d0;
+          padding: 6px 14px;
+          border-radius: 20px;
+          font-size: 0.78rem;
+          font-weight: 700;
+          color: #047857;
+          text-align: center;
         }
 
         .empty-feed-card {
