@@ -52,11 +52,15 @@ export default async function handler(req: any, res: any) {
 
         const getPostTime = (p: any): number => {
           if (!p || !p.id) return 0;
-          const match = p.id.match(/\d+/);
-          if (match) {
-            const num = parseInt(match[0], 10);
-            if (num > 100000000) return num;
-            return 100000 - num;
+          const matches = p.id.match(/\d+/g);
+          if (matches && matches.length > 0) {
+            let maxNum = 0;
+            for (const m of matches) {
+              const val = Number(m);
+              if (val > maxNum) maxNum = val;
+            }
+            if (maxNum > 100000000) return maxNum;
+            return 100000 - maxNum;
           }
           return 0;
         };
