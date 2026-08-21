@@ -1,21 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Post } from '../../types';
 import { useApp } from '../../context/AppContext';
 import { 
   Heart, MessageCircle, Share2, Pin, ShieldCheck, 
-  CheckCircle2, Send, AlertTriangle, Sparkles, MoreHorizontal 
+  CheckCircle2, Send, AlertTriangle, Sparkles, MoreHorizontal, Reply, X
 } from 'lucide-react';
 
 export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
   const { toggleLikePost, addComment, votePoll, user } = useApp();
   const [commentText, setCommentText] = useState('');
   const [showComments, setShowComments] = useState(false);
+  const [replyToAuthor, setReplyToAuthor] = useState<string | null>(null);
+  const commentInputRef = useRef<HTMLInputElement>(null);
+
+  const handleStartReply = (authorName: string) => {
+    setReplyToAuthor(authorName);
+    setShowComments(true);
+    setTimeout(() => {
+      commentInputRef.current?.focus();
+    }, 100);
+  };
 
   const handleCommentSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!commentText.trim()) return;
-    addComment(post.id, commentText);
+    addComment(post.id, commentText, replyToAuthor || undefined);
     setCommentText('');
+    setReplyToAuthor(null);
     setShowComments(true);
   };
 
@@ -163,7 +174,21 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
                       {c.verified && <CheckCircle2 size={13} className="text-blue" />}
                       <span className="comment-addr">• {c.authorAddress}</span>
                       <span className="comment-time">• {c.timestamp}</span>
+                      <button 
+                        type="button" 
+                        className="comment-reply-action-btn"
+                        onClick={() => handleStartReply(commentName)}
+                      >
+                        <Reply size={12} /> Ответить
+                      </button>
                     </div>
+
+                    {c.replyToUser && (
+                      <div className="reply-target-badge">
+                        <Reply size={12} /> Ответ для <b>@{c.replyToUser}</b>
+                      </div>
+                    )}
+
                     <p className="comment-text">{c.content}</p>
                   </div>
                 </div>
@@ -171,12 +196,23 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
             })}
           </div>
 
+          {/* Reply Indicator Pill */}
+          {replyToAuthor && (
+            <div className="reply-indicator-bar">
+              <span>↩️ Отвечаем соседу <b>@{replyToAuthor}</b></span>
+              <button type="button" onClick={() => setReplyToAuthor(null)} className="cancel-reply-btn">
+                <X size={14} />
+              </button>
+            </div>
+          )}
+
           {/* Quick Add Comment Form */}
           <form onSubmit={handleCommentSubmit} className="add-comment-form">
             <img src={user.avatar} alt={user.name} className="comment-avatar" />
             <input 
+              ref={commentInputRef}
               type="text" 
-              placeholder="Написать ответ соседям..." 
+              placeholder={replyToAuthor ? `Ответ для @${replyToAuthor}...` : "Написать ответ соседям..."} 
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
             />
@@ -409,6 +445,58 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
         .comment-author { font-weight: 700; color: #0f172a; }
         .comment-addr, .comment-time { color: #94a3b8; }
         .comment-text { font-size: 0.88rem; color: #334155; }
+
+        .comment-reply-action-btn {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          background: none;
+          border: none;
+          color: #059669;
+          font-weight: 700;
+          font-size: 0.72rem;
+          margin-left: auto;
+          cursor: pointer;
+          padding: 2px 6px;
+          border-radius: 4px;
+        }
+
+        .comment-reply-action-btn:hover {
+          background: #ecfdf5;
+        }
+
+        .reply-target-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 0.72rem;
+          color: #047857;
+          background: #ecfdf5;
+          padding: 2px 8px;
+          border-radius: 6px;
+          margin-bottom: 4px;
+        }
+
+        .reply-indicator-bar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          background: #ecfdf5;
+          border: 1px solid #a7f3d0;
+          padding: 6px 12px;
+          border-radius: 8px;
+          font-size: 0.78rem;
+          color: #047857;
+        }
+
+        .cancel-reply-btn {
+          background: none;
+          border: none;
+          color: #047857;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+        }
 
         .add-comment-form {
           display: flex;

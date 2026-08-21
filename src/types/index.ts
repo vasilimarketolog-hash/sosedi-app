@@ -43,6 +43,7 @@ export interface Comment {
   timestamp: string;
   likes: number;
   userLiked?: boolean;
+  replyToUser?: string;
 }
 
 export interface Post {

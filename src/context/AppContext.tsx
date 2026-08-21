@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { 
-  User, Post, MarketItem, MasterService, MapMarker, 
+  User, Post, Comment, MarketItem, MasterService, MapMarker, 
   HouseChat, NeighborhoodInfo, CategoryType 
 } from '../types';
 import { 
@@ -37,7 +37,7 @@ interface AppContextType {
   posts: Post[];
   addPost: (newPost: Omit<Post, 'id' | 'timestamp' | 'likes' | 'comments'>) => Promise<void>;
   toggleLikePost: (postId: string) => void;
-  addComment: (postId: string, content: string) => void;
+  addComment: (postId: string, content: string, replyToUser?: string) => void;
   votePoll: (postId: string, optionId: string) => void;
 
   marketItems: MarketItem[];
@@ -262,12 +262,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  const addComment = (postId: string, content: string) => {
+  const addComment = (postId: string, content: string, replyToUser?: string) => {
     if (!content.trim()) return;
     setPosts(prev => {
       const updated = prev.map(p => {
         if (p.id === postId) {
-          const newComment = {
+          const newComment: Comment = {
             id: `c_${Date.now()}`,
             authorName: user.name,
             authorAvatar: user.avatar,
@@ -276,6 +276,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             content,
             timestamp: 'Только что',
             likes: 0,
+            replyToUser: replyToUser || undefined,
           };
           return {
             ...p,
