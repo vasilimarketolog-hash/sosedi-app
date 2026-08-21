@@ -118,23 +118,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [user]);
 
-  // Cloud Data Sync Integration
+  // Cloud Data Sync Integration with Smart Merge
   useEffect(() => {
-    fetchCloudData().then(cloud => {
-      if (cloud) {
-        if (cloud.posts && cloud.posts.length > 0) setPosts(cloud.posts);
-        if (cloud.marketItems && cloud.marketItems.length > 0) setMarketItems(cloud.marketItems);
+    const syncFromCloud = async () => {
+      const cloud = await fetchCloudData();
+      if (!cloud) return;
+
+      if (cloud.posts && cloud.posts.length > 0) {
+        setPosts(prev => {
+          const map = new Map<string, Post>();
+          // Preserve all local posts first
+          prev.forEach(p => map.set(p.id, p));
+          // Merge in new cloud posts
+          cloud.posts.forEach(p => {
+            if (!map.has(p.id)) map.set(p.id, p);
+          });
+          return Array.from(map.values());
+        });
       }
-    });
 
-    const interval = setInterval(() => {
-      fetchCloudData().then(cloud => {
-        if (cloud && cloud.posts && cloud.posts.length > 0) {
-          setPosts(cloud.posts);
-        }
-      });
-    }, 10000);
+      if (cloud.marketItems && cloud.marketItems.length > 0) {
+        setMarketItems(prev => {
+          const map = new Map<string, MarketItem>();
+          prev.forEach(m => map.set(m.id, m));
+          cloud.marketItems.forEach(m => {
+            if (!map.has(m.id)) map.set(m.id, m);
+          });
+          return Array.from(map.values());
+        });
+      }
+    };
 
+    syncFromCloud();
+    const interval = setInterval(syncFromCloud, 10000);
     return () => clearInterval(interval);
   }, []);
 

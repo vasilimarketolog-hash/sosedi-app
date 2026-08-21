@@ -54,40 +54,6 @@ export const Header: React.FC = () => {
             </div>
           </div>
 
-          {/* Neighborhood Selector Dropdown */}
-          <div className="dropdown-wrapper" ref={neighborhoodRef}>
-            <button 
-              className="neighborhood-selector-btn"
-              onClick={() => setIsNeighborhoodMenuOpen(!isNeighborhoodMenuOpen)}
-            >
-              <MapPin size={16} className="text-emerald" />
-              <span className="neighborhood-name">{currentNeighborhood.name}</span>
-              <ChevronDown size={14} className="text-muted" />
-            </button>
-
-            {isNeighborhoodMenuOpen && (
-              <div className="dropdown-menu">
-                <div className="dropdown-header">Выберите ваш ЖК или микрорайон</div>
-                {availableNeighborhoods.map((n) => (
-                  <button
-                    key={n.id}
-                    className={`dropdown-item ${n.id === currentNeighborhood.id ? 'active' : ''}`}
-                    onClick={() => {
-                      setCurrentNeighborhood(n);
-                      setIsNeighborhoodMenuOpen(false);
-                    }}
-                  >
-                    <div className="item-icon">🏢</div>
-                    <div className="item-content">
-                      <div className="item-title">{n.name}</div>
-                      <div className="item-subtitle">{n.city}, {n.district} • {n.residentsCount} соседей</div>
-                    </div>
-                    {n.id === currentNeighborhood.id && <CheckCircle2 size={16} className="text-emerald" />}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
         </div>
 
         {/* Action Buttons & User Profile */}
