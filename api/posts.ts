@@ -1,5 +1,37 @@
 // Vercel Serverless Function for Sosedi.Online Multi-Device Real-Time Cloud Sync
-let globalPosts: any[] = [];
+
+const defaultDemoPosts = [
+  {
+    id: "p_1",
+    authorId: "u_101",
+    authorName: "Михаил Ковалёв",
+    authorAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=250",
+    authorAddress: "д. 45к2, Подъезд 2",
+    verified: true,
+    timestamp: "25 минут назад",
+    category: "urgent",
+    pinned: true,
+    title: "🚨 Внимание! Отключение горячей воды 15 августа",
+    content: "Управляющая компания «Лиговский Сервис» сообщает, что в связи с плановой опрессовкой теплосетей 15 августа с 09:00 до 20:00 будет временно отключено горячее водоснабжение в корпусах 1, 2 и 3. Наберите запасы воды заранее!",
+    likes: 24,
+    userLiked: false,
+    tags: ["УК", "Водоснабжение", "Важное"],
+    comments: [
+      {
+        id: "c_1",
+        authorName: "Ольга Петрова",
+        authorAvatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=250",
+        authorAddress: "д. 45к2, Подъезд 1",
+        verified: true,
+        content: "Спасибо за предупреждение! Опять бойлер включать.",
+        timestamp: "15 минут назад",
+        likes: 3
+      }
+    ]
+  }
+];
+
+let globalPosts: any[] = defaultDemoPosts;
 let globalMarketItems: any[] = [];
 
 export default async function handler(req: any, res: any) {
@@ -15,7 +47,7 @@ export default async function handler(req: any, res: any) {
 
   if (req.method === 'GET') {
     return res.status(200).json({
-      posts: globalPosts,
+      posts: globalPosts && globalPosts.length > 0 ? globalPosts : defaultDemoPosts,
       marketItems: globalMarketItems,
     });
   }
