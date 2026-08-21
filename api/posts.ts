@@ -25,14 +25,32 @@ export default async function handler(req: any, res: any) {
       const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
       
       if (body && Array.isArray(body.posts)) {
-        // Merge posts keeping latest
-        const map = new Map();
-        body.posts.forEach((p: any) => map.set(p.id, p));
-        globalPosts.forEach((p: any) => {
-          if (!map.has(p.id)) map.set(p.id, p);
+        const postMap = new Map();
+
+        // 1. Add existing global server posts first
+        globalPosts.forEach((p: any) => postMap.set(p.id, p));
+
+        // 2. Merge incoming posts from device
+        body.posts.forEach((incoming: any) => {
+          const existing = postMap.get(incoming.id);
+          if (!existing) {
+            postMap.set(incoming.id, incoming);
+          } else {
+            // Smart comment union merge
+            const commentMap = new Map();
+            (existing.comments || []).forEach((c: any) => commentMap.set(c.id, c));
+            (incoming.comments || []).forEach((c: any) => commentMap.set(c.id, c));
+
+            postMap.set(incoming.id, {
+              ...existing,
+              ...incoming,
+              likes: Math.max(existing.likes || 0, incoming.likes || 0),
+              comments: Array.from(commentMap.values()),
+            });
+          }
         });
 
-        const mergedPosts = Array.from(map.values());
+        const mergedPosts = Array.from(postMap.values());
         mergedPosts.sort((a: any, b: any) => {
           if (a.id.startsWith('p_') && b.id.startsWith('p_')) {
             return b.id.localeCompare(a.id);
@@ -46,7 +64,10 @@ export default async function handler(req: any, res: any) {
       }
 
       if (body && Array.isArray(body.marketItems)) {
-        globalMarketItems = body.marketItems.slice(0, 50);
+        const marketMap = new Map();
+        globalMarketItems.forEach((m: any) => marketMap.set(m.id, m));
+        body.marketItems.forEach((m: any) => marketMap.set(m.id, m));
+        globalMarketItems = Array.from(marketMap.values()).slice(0, 50);
       }
 
       return res.status(200).json({

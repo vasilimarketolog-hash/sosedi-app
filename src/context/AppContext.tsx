@@ -127,7 +127,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [user]);
 
-  // Cloud Data Sync Integration with Double-Lock Persistence
+  // Cloud Data Sync Integration with Smart Comment & Post Merging
   useEffect(() => {
     const syncFromCloud = async () => {
       const cloud = await fetchCloudData();
@@ -143,13 +143,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (cloud.posts && Array.isArray(cloud.posts)) {
         setPosts(prev => {
           const map = new Map<string, Post>();
-          // 1. Add currentLocalPosts (preserves new user posts!)
+
+          // 1. Add local posts
           currentLocalPosts.forEach(p => map.set(p.id, p));
           // 2. Add prev state
           prev.forEach(p => map.set(p.id, p));
-          // 3. Add cloud posts
+
+          // 3. Smart merge cloud posts & comments
           cloud.posts.forEach(p => {
-            if (!map.has(p.id)) map.set(p.id, p);
+            const existing = map.get(p.id);
+            if (!existing) {
+              map.set(p.id, p);
+            } else {
+              const commentMap = new Map();
+              (existing.comments || []).forEach((c: any) => commentMap.set(c.id, c));
+              (p.comments || []).forEach((c: any) => commentMap.set(c.id, c));
+
+              map.set(p.id, {
+                ...existing,
+                ...p,
+                likes: Math.max(existing.likes || 0, p.likes || 0),
+                comments: Array.from(commentMap.values()),
+              });
+            }
           });
 
           const all = Array.from(map.values());
@@ -169,16 +185,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setMarketItems(prev => {
           const map = new Map<string, MarketItem>();
           prev.forEach(m => map.set(m.id, m));
-          cloud.marketItems.forEach(m => {
-            if (!map.has(m.id)) map.set(m.id, m);
-          });
+          cloud.marketItems.forEach(m => map.set(m.id, m));
           return Array.from(map.values());
         });
       }
     };
 
     syncFromCloud();
-    const interval = setInterval(syncFromCloud, 10000);
+    const interval = setInterval(syncFromCloud, 4000);
     return () => clearInterval(interval);
   }, []);
 
