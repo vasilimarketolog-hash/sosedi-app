@@ -21,20 +21,68 @@ export const CreatePostModal: React.FC = () => {
 
   if (!isCreatePostModalOpen) return null;
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const compressPostImage = (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      if (!file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target?.result as string);
+        reader.readAsDataURL(file);
+        return;
+      }
+
+      const img = new Image();
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_SIZE = 850;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_SIZE) {
+              height = Math.round((height * MAX_SIZE) / width);
+              width = MAX_SIZE;
+            }
+          } else {
+            if (height > MAX_SIZE) {
+              width = Math.round((width * MAX_SIZE) / height);
+              height = MAX_SIZE;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/jpeg', 0.75));
+          } else {
+            resolve(e.target?.result as string);
+          }
+        };
+        img.src = e.target?.result as string;
+      };
+
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
+    for (const file of Array.from(files)) {
       const isVideo = file.type.startsWith('video/');
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          setAttachedFiles(prev => [...prev, { url: event.target!.result as string, isVideo }]);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
+      try {
+        const compressedUrl = await compressPostImage(file);
+        setAttachedFiles(prev => [...prev, { url: compressedUrl, isVideo }]);
+      } catch (err) {
+        console.warn('Failed to compress image:', err);
+      }
+    }
   };
 
   const handleRemoveFile = (index: number) => {
