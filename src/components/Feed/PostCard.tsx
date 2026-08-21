@@ -45,22 +45,30 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
       )}
 
       {/* Author Header */}
-      <div className="post-author-row">
-        <div className="author-info">
-          <img src={post.authorAvatar} alt={post.authorName} className="author-avatar" />
-          <div>
-            <div className="author-name-group">
-              <span className="author-name">{post.authorName}</span>
-              <span title="Проверенный жилец дома"><CheckCircle2 size={15} className="text-blue" /></span>
-            </div>
-            <div className="author-address">{post.authorAddress} • {post.timestamp}</div>
-          </div>
-        </div>
+      {(() => {
+        const isMe = post.authorId === user.id || post.authorName === user.name;
+        const displayAvatar = isMe ? user.avatar : post.authorAvatar;
+        const displayName = isMe ? user.name : post.authorName;
 
-        <div className="post-meta-actions">
-          {getCategoryBadge()}
-        </div>
-      </div>
+        return (
+          <div className="post-author-row">
+            <div className="author-info">
+              <img src={displayAvatar} alt={displayName} className="author-avatar" />
+              <div>
+                <div className="author-name-group">
+                  <span className="author-name">{displayName}</span>
+                  <span title="Проверенный жилец дома"><CheckCircle2 size={15} className="text-blue" /></span>
+                </div>
+                <div className="author-address">{post.authorAddress} • {post.timestamp}</div>
+              </div>
+            </div>
+
+            <div className="post-meta-actions">
+              {getCategoryBadge()}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Title */}
       {post.title && <h3 className="post-title">{post.title}</h3>}
@@ -141,20 +149,26 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
       {showComments && (
         <div className="comments-section">
           <div className="comments-list">
-            {post.comments.map((c) => (
-              <div key={c.id} className="comment-item">
-                <img src={c.authorAvatar} alt={c.authorName} className="comment-avatar" />
-                <div className="comment-bubble">
-                  <div className="comment-meta">
-                    <span className="comment-author">{c.authorName}</span>
-                    {c.verified && <CheckCircle2 size={13} className="text-blue" />}
-                    <span className="comment-addr">• {c.authorAddress}</span>
-                    <span className="comment-time">• {c.timestamp}</span>
+            {post.comments.map((c) => {
+              const isCommentMe = c.authorName === user.name;
+              const commentAvatar = isCommentMe ? user.avatar : c.authorAvatar;
+              const commentName = isCommentMe ? user.name : c.authorName;
+
+              return (
+                <div key={c.id} className="comment-item">
+                  <img src={commentAvatar} alt={commentName} className="comment-avatar" />
+                  <div className="comment-bubble">
+                    <div className="comment-meta">
+                      <span className="comment-author">{commentName}</span>
+                      {c.verified && <CheckCircle2 size={13} className="text-blue" />}
+                      <span className="comment-addr">• {c.authorAddress}</span>
+                      <span className="comment-time">• {c.timestamp}</span>
+                    </div>
+                    <p className="comment-text">{c.content}</p>
                   </div>
-                  <p className="comment-text">{c.content}</p>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Quick Add Comment Form */}
