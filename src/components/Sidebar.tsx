@@ -345,7 +345,7 @@ export const Sidebar: React.FC = () => {
 
         @media (max-width: 900px) {
           .sidebar-container {
-            width: 100%;
+            display: none;
           }
         }
       `}</style>

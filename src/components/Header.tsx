@@ -386,24 +386,16 @@ export const Header: React.FC = () => {
           background: #ecfdf5;
         }
 
-        @media (max-width: 900px) {
-          .logo-subtitle, .scope-section {
-            display: none;
-          }
-          .header-container {
-            padding: 10px 12px;
-          }
-        }
-
-        @media (max-width: 640px) {
+        @media (max-width: 768px) {
+          .dropdown-wrapper { display: none; }
           .country-badge-flag { display: none; }
           .verified-badge-pill span, .unverified-btn-pill span { display: none; }
           .verified-badge-pill, .unverified-btn-pill { padding: 6px 8px; }
-          .neighborhood-name { max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
           .reg-nav-btn span { display: none; }
-          .reg-nav-btn { padding: 8px; }
-          .header-container { gap: 8px; }
-          .brand-section { gap: 8px; }
+          .reg-nav-btn { padding: 8px 10px; }
+          .header-container { padding: 8px 10px; gap: 8px; }
+          .brand-section { gap: 6px; }
+          .actions-section { gap: 6px; }
         }
       `}</style>
     </header>
