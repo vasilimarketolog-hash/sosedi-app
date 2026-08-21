@@ -55,19 +55,16 @@ interface AppContextType {
   sendMessageToChat: (chatId: string, text: string) => void;
 
   mapMarkers: MapMarker[];
-  
+  completeVerification: (address?: string, building?: string, entrance?: number, apartment?: number) => void;
+
   isVerificationModalOpen: boolean;
   setIsVerificationModalOpen: (open: boolean) => void;
-  completeVerification: (address: string, building: string, entrance: number, apartment: number) => void;
-
   isCreatePostModalOpen: boolean;
   setIsCreatePostModalOpen: (open: boolean) => void;
-
   isCreateMarketModalOpen: boolean;
   setIsCreateMarketModalOpen: (open: boolean) => void;
-
   isRegisteringView: boolean;
-  setIsRegisteringView: (open: boolean) => void;
+  setIsRegisteringView: (registering: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -84,16 +81,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [radiusScope, setRadiusScope] = useState<RadiusScope>('complex');
 
   const [posts, setPosts] = useState<Post[]>(() => {
-    const saved = localStorage.getItem('sosedi_posts');
-    return saved ? JSON.parse(saved) : initialPosts;
+    try {
+      const saved = localStorage.getItem('sosedi_posts');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return initialPosts;
   });
 
   const [marketItems, setMarketItems] = useState<MarketItem[]>(() => {
-    const saved = localStorage.getItem('sosedi_market');
-    return saved ? JSON.parse(saved) : initialMarketItems;
+    try {
+      const saved = localStorage.getItem('sosedi_market');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return initialMarketItems;
   });
-  const [marketFilter, setMarketFilter] = useState<string>('all');
 
+  const [marketFilter, setMarketFilter] = useState<string>('all');
   const [masters] = useState<MasterService[]>(initialMasters);
   const [masterCategoryFilter, setMasterCategoryFilter] = useState<string>('all');
 
@@ -102,7 +111,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return saved ? JSON.parse(saved) : initialHouseChats;
   });
   const [activeChatId, setActiveChatId] = useState<string>('chat_house');
-
   const [mapMarkers] = useState<MapMarker[]>(initialMapMarkers);
 
   const [isVerificationModalOpen, setIsVerificationModalOpen] = useState<boolean>(false);
@@ -110,6 +118,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isCreateMarketModalOpen, setIsCreateMarketModalOpen] = useState<boolean>(false);
   const [isRegisteringView, setIsRegisteringView] = useState<boolean>(false);
 
+  // Sync user profile to localStorage
   useEffect(() => {
     try {
       localStorage.setItem('sosedi_user', JSON.stringify(user));
@@ -118,23 +127,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [user]);
 
-  // Cloud Data Sync Integration with Smart Merge
+  // Cloud Data Sync Integration with Double-Lock Persistence
   useEffect(() => {
     const syncFromCloud = async () => {
       const cloud = await fetchCloudData();
       if (!cloud) return;
 
-      if (cloud.posts && cloud.posts.length > 0) {
+      // Always read latest local storage posts
+      let currentLocalPosts: Post[] = [];
+      try {
+        const saved = localStorage.getItem('sosedi_posts');
+        if (saved) currentLocalPosts = JSON.parse(saved);
+      } catch (e) {}
+
+      if (cloud.posts && Array.isArray(cloud.posts)) {
         setPosts(prev => {
           const map = new Map<string, Post>();
-          // Preserve local posts first
+          // 1. Add currentLocalPosts (preserves new user posts!)
+          currentLocalPosts.forEach(p => map.set(p.id, p));
+          // 2. Add prev state
           prev.forEach(p => map.set(p.id, p));
-          // Merge in new cloud posts
+          // 3. Add cloud posts
           cloud.posts.forEach(p => {
             if (!map.has(p.id)) map.set(p.id, p);
           });
+
           const all = Array.from(map.values());
-          // Sort newest posts (higher timestamp ID p_...) first
           all.sort((a, b) => {
             if (a.id.startsWith('p_') && b.id.startsWith('p_')) {
               return b.id.localeCompare(a.id);
@@ -147,7 +165,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
       }
 
-      if (cloud.marketItems && cloud.marketItems.length > 0) {
+      if (cloud.marketItems && Array.isArray(cloud.marketItems)) {
         setMarketItems(prev => {
           const map = new Map<string, MarketItem>();
           prev.forEach(m => map.set(m.id, m));
@@ -164,6 +182,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => clearInterval(interval);
   }, []);
 
+  // Save posts to localStorage
   useEffect(() => {
     try {
       localStorage.setItem('sosedi_posts', JSON.stringify(posts));
@@ -199,6 +218,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     const updated = [newPost, ...posts];
     setPosts(updated);
+
+    // Instant synchronous LocalStorage save
+    try {
+      localStorage.setItem('sosedi_posts', JSON.stringify(updated));
+    } catch (e) {
+      console.warn('LocalStorage save error in addPost', e);
+    }
+
+    // Cloud push
     await syncPostsToCloud(updated, marketItems);
   };
 
@@ -301,22 +329,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return {
           ...c,
           messages: [...c.messages, newMsg],
+          unreadCount: 0,
         };
       }
       return c;
     }));
   };
 
-  const completeVerification = (address: string, building: string, entrance: number, apartment: number) => {
+  const completeVerification = (address?: string, building?: string, entrance?: number, apartment?: number) => {
     setUser(prev => ({
       ...prev,
-      address,
-      building,
-      entrance,
-      apartment,
       verified: true,
-      verifiedMethod: 'Верифицировано через Росреестр / Госуслуги',
-      thanksCount: prev.thanksCount + 10,
+      verifiedMethod: 'Верифицирован через Росреестр / Госуслуги',
+      address: address || prev.address,
+      building: building || prev.building,
+      entrance: entrance || prev.entrance,
+      apartment: apartment || prev.apartment,
     }));
     setIsVerificationModalOpen(false);
   };
@@ -351,15 +379,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setActiveChatId,
       sendMessageToChat,
       mapMarkers,
+      completeVerification,
       isVerificationModalOpen,
       setIsVerificationModalOpen,
-      completeVerification,
       isCreatePostModalOpen,
       setIsCreatePostModalOpen,
       isCreateMarketModalOpen,
       setIsCreateMarketModalOpen,
       isRegisteringView,
-      setIsRegisteringView,
+      setIsRegisteringView
     }}>
       {children}
     </AppContext.Provider>
