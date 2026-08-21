@@ -281,3 +281,27 @@ input, textarea, select {
   border-radius: var(--radius-lg);
   z-index: 1;
 }
+
+/* Mobile Responsiveness */
+@media (max-width: 640px) {
+  .modal-overlay {
+    padding: 12px 8px 80px;
+  }
+
+  .modal-content {
+    padding: 20px 14px;
+    max-width: 100%;
+    box-sizing: border-box;
+    border-radius: 14px;
+  }
+
+  .form-row {
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+
+  .card {
+    padding: 14px;
+    border-radius: 12px;
+  }
+}

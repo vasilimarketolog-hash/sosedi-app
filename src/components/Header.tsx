@@ -427,6 +427,17 @@ export const Header: React.FC = () => {
             padding: 10px 12px;
           }
         }
+
+        @media (max-width: 640px) {
+          .country-badge-flag { display: none; }
+          .verified-badge-pill span, .unverified-btn-pill span { display: none; }
+          .verified-badge-pill, .unverified-btn-pill { padding: 6px 8px; }
+          .neighborhood-name { max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+          .reg-nav-btn span { display: none; }
+          .reg-nav-btn { padding: 8px; }
+          .header-container { gap: 8px; }
+          .brand-section { gap: 8px; }
+        }
       `}</style>
     </header>
   );
