@@ -11,6 +11,12 @@ export const HouseChatsView: React.FC = () => {
   const [mobileShowChat, setMobileShowChat] = useState(false);
   const [chatFilterTab, setChatFilterTab] = useState<'all' | 'direct'>('all');
 
+  React.useEffect(() => {
+    if (activeChatId) {
+      setMobileShowChat(true);
+    }
+  }, [activeChatId]);
+
   const activeChat = chats.find(c => c.id === activeChatId) || chats[0];
 
   const filteredChats = chats.filter(c => {
@@ -454,16 +460,23 @@ export const HouseChatsView: React.FC = () => {
 
         @media (max-width: 768px) {
           .chats-view-container {
-            height: calc(100vh - 140px);
+            height: calc(100vh - 120px);
+            min-height: 480px;
             border-radius: 0;
+            margin: -10px -10px 0 -10px;
           }
 
           .chats-sidebar {
             width: 100%;
+            height: 100%;
           }
 
           .chats-sidebar.mobile-hidden {
             display: none;
+          }
+
+          .chat-main-area {
+            height: 100%;
           }
 
           .chat-main-area.mobile-hidden {
@@ -472,11 +485,29 @@ export const HouseChatsView: React.FC = () => {
 
           .chat-main-area.mobile-active {
             display: flex;
+            flex-direction: column;
             width: 100%;
+            height: 100%;
           }
 
           .mobile-back-btn {
             display: inline-flex;
+          }
+
+          .messages-thread {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+          }
+
+          .chat-input-form {
+            position: sticky;
+            bottom: 0;
+            background: #ffffff;
+            border-top: 1px solid #cbd5e1;
+            padding: 10px 12px;
+            box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
+            z-index: 20;
           }
         }
       `}</style>
