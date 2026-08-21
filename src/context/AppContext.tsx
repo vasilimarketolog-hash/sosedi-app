@@ -110,19 +110,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isRegisteringView, setIsRegisteringView] = useState<boolean>(false);
 
   useEffect(() => {
-    localStorage.setItem('sosedi_user', JSON.stringify(user));
+    try {
+      localStorage.setItem('sosedi_user', JSON.stringify(user));
+    } catch (e) {
+      console.warn('LocalStorage quota exceeded for user profile', e);
+    }
   }, [user]);
 
   useEffect(() => {
-    localStorage.setItem('sosedi_posts', JSON.stringify(posts));
+    try {
+      localStorage.setItem('sosedi_posts', JSON.stringify(posts));
+    } catch (e) {
+      console.warn('LocalStorage quota exceeded for posts', e);
+    }
   }, [posts]);
 
   useEffect(() => {
-    localStorage.setItem('sosedi_market', JSON.stringify(marketItems));
+    try {
+      localStorage.setItem('sosedi_market', JSON.stringify(marketItems));
+    } catch (e) {
+      console.warn('LocalStorage quota exceeded for market', e);
+    }
   }, [marketItems]);
 
   useEffect(() => {
-    localStorage.setItem('sosedi_chats', JSON.stringify(chats));
+    try {
+      localStorage.setItem('sosedi_chats', JSON.stringify(chats));
+    } catch (e) {
+      console.warn('LocalStorage quota exceeded for chats', e);
+    }
   }, [chats]);
 
   const addPost = (newPostData: Omit<Post, 'id' | 'timestamp' | 'likes' | 'comments'>) => {

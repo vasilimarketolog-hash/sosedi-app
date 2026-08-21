@@ -2,12 +2,39 @@ import React, { useState, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { ShieldCheck, CheckCircle2, Heart, Award, MapPin, Calendar, Edit3, Sparkles, Camera, Save, X } from 'lucide-react';
 
+// Helper function to compress high-res mobile photos to 250x250 compressed JPEG
+const compressAvatar = (file: File, callback: (compressedUrl: string) => void) => {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const targetSize = 250;
+      canvas.width = targetSize;
+      canvas.height = targetSize;
+
+      // Center and crop to square
+      const minDim = Math.min(img.width, img.height);
+      const startX = (img.width - minDim) / 2;
+      const startY = (img.height - minDim) / 2;
+
+      ctx?.drawImage(img, startX, startY, minDim, minDim, 0, 0, targetSize, targetSize);
+      const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.82);
+      callback(compressedDataUrl);
+    };
+    img.src = e.target?.result as string;
+  };
+  reader.readAsDataURL(file);
+};
+
 export const ProfileView: React.FC = () => {
   const { user, setUser, posts, setIsVerificationModalOpen, currentNeighborhood } = useApp();
 
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(user.name);
   const [editBio, setEditBio] = useState(user.bio);
+  const [isCompressing, setIsCompressing] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const userPosts = posts.filter(p => p.authorId === user.id);
@@ -16,14 +43,11 @@ export const ProfileView: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      if (event.target?.result) {
-        const newAvatarUrl = event.target.result as string;
-        setUser(prev => ({ ...prev, avatar: newAvatarUrl }));
-      }
-    };
-    reader.readAsDataURL(file);
+    setIsCompressing(true);
+    compressAvatar(file, (compressedUrl) => {
+      setUser(prev => ({ ...prev, avatar: compressedUrl }));
+      setIsCompressing(false);
+    });
   };
 
   const handleSaveProfile = (e: React.FormEvent) => {
@@ -38,7 +62,7 @@ export const ProfileView: React.FC = () => {
 
   return (
     <div className="profile-view animate-fade-in">
-      {/* Hidden File Input for Avatar Upload */}
+      {/* Hidden File Input for Mobile Avatar Upload */}
       <input 
         type="file" 
         ref={avatarInputRef}
@@ -102,10 +126,11 @@ export const ProfileView: React.FC = () => {
                   <button 
                     type="button" 
                     className="btn btn-secondary btn-sm upload-photo-btn"
+                    disabled={isCompressing}
                     onClick={() => avatarInputRef.current?.click()}
                   >
                     <Camera size={16} />
-                    <span>Выбрать фото из галереи</span>
+                    <span>{isCompressing ? 'Обработка фото...' : 'Загрузить фото из галереи'}</span>
                   </button>
                 </div>
 
