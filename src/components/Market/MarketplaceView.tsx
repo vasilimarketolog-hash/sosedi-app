@@ -307,6 +307,41 @@ export const MarketplaceView: React.FC = () => {
 
         .item-footer {
           margin-top: 6px;
+          width: 100%;
+        }
+
+        .item-footer button {
+          width: 100%;
+          justify-content: center;
+        }
+
+        @media (max-width: 640px) {
+          .market-hero-card {
+            flex-direction: column;
+            align-items: stretch;
+            padding: 16px;
+            gap: 14px;
+          }
+
+          .market-hero-card .btn-lg {
+            width: 100%;
+            justify-content: center;
+          }
+
+          .market-grid {
+            grid-template-columns: 1fr;
+            gap: 14px;
+          }
+
+          .item-footer {
+            width: 100%;
+          }
+
+          .item-footer button {
+            width: 100% !important;
+            box-sizing: border-box;
+            justify-content: center;
+          }
         }
       `}</style>
     </div>

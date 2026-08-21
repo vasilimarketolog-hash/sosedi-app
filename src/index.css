@@ -264,6 +264,23 @@ input, textarea, select {
   box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
 }
 
+.modal-footer {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.modal-footer .btn,
+.modal-footer button {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  justify-content: center !important;
+  margin: 0 !important;
+}
+
 /* Animations */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(6px); }
@@ -293,6 +310,15 @@ input, textarea, select {
     max-width: 100%;
     box-sizing: border-box;
     border-radius: 14px;
+  }
+
+  .modal-footer {
+    width: 100%;
+    margin-top: 12px;
+  }
+
+  .modal-footer button {
+    width: 100% !important;
   }
 
   .form-row {
