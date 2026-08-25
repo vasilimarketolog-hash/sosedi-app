@@ -73,8 +73,13 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User>(() => {
-    const saved = localStorage.getItem('sosedi_user');
-    return saved ? JSON.parse(saved) : initialUser;
+    try {
+      const saved = localStorage.getItem('sosedi_user');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.warn('Failed to parse sosedi_user from localStorage', e);
+    }
+    return initialUser;
   });
 
   const [currentNeighborhood, setCurrentNeighborhood] = useState<NeighborhoodInfo>(initialNeighborhood);
@@ -109,8 +114,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [masterCategoryFilter, setMasterCategoryFilter] = useState<string>('all');
 
   const [chats, setChats] = useState<HouseChat[]>(() => {
-    const saved = localStorage.getItem('sosedi_chats');
-    return saved ? JSON.parse(saved) : initialHouseChats;
+    try {
+      const saved = localStorage.getItem('sosedi_chats');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.warn('Failed to parse sosedi_chats from localStorage', e);
+    }
+    return initialHouseChats;
   });
   const [activeChatId, setActiveChatId] = useState<string>('chat_house');
   const [mapMarkers] = useState<MapMarker[]>(initialMapMarkers);

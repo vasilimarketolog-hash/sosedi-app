@@ -153,10 +153,49 @@ const MainContent: React.FC = () => {
   );
 };
 
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: any, errorInfo: any) {
+    console.error('App ErrorBoundary caught an error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: 40, textAlign: 'center', fontFamily: 'sans-serif' }}>
+          <h2>Произошла ошибка при загрузке страницы</h2>
+          <p>Мы очистили устаревший кэш. Перезагрузите страницу для продолжения.</p>
+          <button 
+            style={{ padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 'bold' }}
+            onClick={() => {
+              try { localStorage.clear(); } catch(e){}
+              window.location.reload();
+            }}
+          >
+            Обновить страницу
+          </button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 export default function App() {
   return (
-    <AppProvider>
-      <MainContent />
-    </AppProvider>
+    <ErrorBoundary>
+      <AppProvider>
+        <MainContent />
+      </AppProvider>
+    </ErrorBoundary>
   );
 }
