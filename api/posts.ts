@@ -1,4 +1,5 @@
 // Vercel Serverless Function for Sosedi.Online Multi-Device Real-Time Cloud Sync
+const DB_CLOUD_URL = 'https://api.restful-api.dev/objects/ff8081819ff5b11001a02369a8ad6a3d';
 
 const defaultDemoPosts = [
   {
@@ -34,6 +35,43 @@ const defaultDemoPosts = [
 let globalPosts: any[] = defaultDemoPosts;
 let globalMarketItems: any[] = [];
 
+async function loadFromPersistentCloud() {
+  try {
+    const res = await fetch(DB_CLOUD_URL);
+    if (res.ok) {
+      const json = await res.json();
+      if (json && json.data) {
+        if (Array.isArray(json.data.posts) && json.data.posts.length > 0) {
+          globalPosts = json.data.posts;
+        }
+        if (Array.isArray(json.data.marketItems)) {
+          globalMarketItems = json.data.marketItems;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to load from DB_CLOUD_URL', e);
+  }
+}
+
+async function saveToPersistentCloud(posts: any[], marketItems: any[]) {
+  try {
+    await fetch(DB_CLOUD_URL, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'sosedi_app_production_v1',
+        data: {
+          posts,
+          marketItems,
+        }
+      })
+    });
+  } catch (e) {
+    console.warn('Failed to save to DB_CLOUD_URL', e);
+  }
+}
+
 export default async function handler(req: any, res: any) {
   // Allow CORS from any device / origin
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -44,6 +82,9 @@ export default async function handler(req: any, res: any) {
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
+
+  // Load latest state from persistent cloud DB on every request
+  await loadFromPersistentCloud();
 
   if (req.method === 'GET') {
     return res.status(200).json({
@@ -83,7 +124,7 @@ export default async function handler(req: any, res: any) {
         } else {
           const postMap = new Map();
 
-          // 1. Add existing global server posts first
+          // 1. Add existing persistent server posts first
           globalPosts.forEach((p: any) => postMap.set(p.id, p));
 
           // 2. Merge incoming posts from device
@@ -122,6 +163,9 @@ export default async function handler(req: any, res: any) {
         body.marketItems.forEach((m: any) => marketMap.set(m.id, m));
         globalMarketItems = Array.from(marketMap.values()).slice(0, 50);
       }
+
+      // Save updated state to persistent cloud DB
+      await saveToPersistentCloud(globalPosts, globalMarketItems);
 
       return res.status(200).json({
         success: true,

@@ -1,5 +1,7 @@
 import { Post, MarketItem } from '../types';
 
+const DB_CLOUD_URL = 'https://api.restful-api.dev/objects/ff8081819ff5b11001a02369a8ad6a3d';
+
 const getApiUrl = () => {
   if (typeof window !== 'undefined') {
     return `${window.location.origin}/api/posts`;
@@ -15,19 +17,36 @@ export interface CloudStoreData {
 export const fetchCloudData = async (): Promise<CloudStoreData | null> => {
   try {
     const response = await fetch(getApiUrl());
-    if (!response.ok) return null;
-    const json = await response.json();
-    if (json) {
-      return {
-        posts: Array.isArray(json.posts) ? json.posts : [],
-        marketItems: Array.isArray(json.marketItems) ? json.marketItems : [],
-      };
+    if (response.ok) {
+      const json = await response.json();
+      if (json && Array.isArray(json.posts) && json.posts.length > 0) {
+        return {
+          posts: json.posts,
+          marketItems: Array.isArray(json.marketItems) ? json.marketItems : [],
+        };
+      }
     }
-    return null;
   } catch (err) {
-    console.warn('Failed to fetch from Vercel sync API:', err);
-    return null;
+    console.warn('Primary Vercel API fetch failed, trying direct cloud fallback:', err);
   }
+
+  // Fail-safe direct cloud DB fetch
+  try {
+    const directRes = await fetch(DB_CLOUD_URL);
+    if (directRes.ok) {
+      const json = await directRes.json();
+      if (json && json.data && Array.isArray(json.data.posts)) {
+        return {
+          posts: json.data.posts,
+          marketItems: Array.isArray(json.data.marketItems) ? json.data.marketItems : [],
+        };
+      }
+    }
+  } catch (e) {
+    console.warn('Direct cloud fallback failed:', e);
+  }
+
+  return null;
 };
 
 export const syncPostsToCloud = async (posts: Post[], marketItems: MarketItem[], isDelete = false): Promise<void> => {

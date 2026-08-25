@@ -206,7 +206,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     syncFromCloud();
-    const interval = setInterval(syncFromCloud, 4000);
+    const interval = setInterval(syncFromCloud, 3000);
     return () => clearInterval(interval);
   }, []);
 
