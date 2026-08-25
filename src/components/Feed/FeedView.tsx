@@ -10,7 +10,9 @@ import {
 export const FeedView: React.FC = () => {
   const { posts, feedCategory, setFeedCategory, setIsCreatePostModalOpen, user, setIsVerificationModalOpen, currentNeighborhood } = useApp();
 
-  const filteredPosts = posts.filter(p => {
+  const postsList = Array.isArray(posts) ? posts : [];
+  const filteredPosts = postsList.filter(p => {
+    if (!p) return false;
     if (feedCategory === 'all') return true;
     return p.category === feedCategory;
   });
@@ -24,10 +26,14 @@ export const FeedView: React.FC = () => {
     { id: 'uk_news', label: '📢 Объявления УК / ТСЖ', icon: '📢' },
   ];
 
+  const userAvatar = user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250';
+  const userName = user?.name || 'Сосед';
+  const isVerified = Boolean(user?.verified);
+
   return (
     <div className="feed-view-container animate-fade-in">
       {/* Verification Prompt Top Banner if unverified */}
-      {!user.verified && (
+      {!isVerified && (
         <div className="unverified-banner">
           <div className="banner-left">
             <ShieldAlert size={24} className="text-amber" />
@@ -44,7 +50,7 @@ export const FeedView: React.FC = () => {
 
       {/* Quick Create Post Input Trigger */}
       <div className="card quick-create-card" onClick={() => setIsCreatePostModalOpen(true)}>
-        <img src={user.avatar} alt={user.name} className="user-avatar-sm" />
+        <img src={userAvatar} alt={userName} className="user-avatar-sm" />
         <div className="fake-input">
           <span>Напишите вопрос или объявление соседям...</span>
         </div>

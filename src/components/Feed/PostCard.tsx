@@ -59,9 +59,9 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
 
       {/* Author Header */}
       {(() => {
-        const isMe = post.authorId === user.id || post.authorName === user.name;
-        const displayAvatar = isMe ? user.avatar : post.authorAvatar;
-        const displayName = isMe ? user.name : post.authorName;
+        const isMe = user && (post.authorId === user.id || post.authorName === user.name);
+        const displayAvatar = isMe ? user.avatar : (post.authorAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250');
+        const displayName = isMe ? user.name : (post.authorName || 'Сосед');
 
         const handleOpenNeighbor = () => {
           setSelectedNeighbor({
@@ -72,7 +72,7 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
           });
         };
 
-        const isMeOrAdmin = post.authorId === user.id || post.authorName === user.name || user.id === 'u1' || true; // User is admin
+        const isMeOrAdmin = user && (post.authorId === user.id || post.authorName === user.name || user.id === 'u1' || true);
 
         const handleDeletePost = (e: React.MouseEvent) => {
           e.stopPropagation();
@@ -90,7 +90,7 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
                   <span className="author-name">{displayName}</span>
                   <span title="Проверенный жилец дома"><CheckCircle2 size={15} className="text-blue" /></span>
                 </div>
-                <div className="author-timestamp-sub">{post.timestamp}</div>
+                <div className="author-timestamp-sub">{post.timestamp || 'Только что'}</div>
               </div>
             </div>
 
@@ -118,7 +118,7 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
       <p className="post-content">{post.content}</p>
 
       {/* Images */}
-      {post.images && post.images.length > 0 && (
+      {Array.isArray(post.images) && post.images.length > 0 && (
         <div className="post-images">
           {post.images.map((img, idx) => (
             <img key={idx} src={img} alt="Post attachment" className="post-img" />
@@ -127,13 +127,14 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
       )}
 
       {/* Interactive Poll */}
-      {post.poll && (
+      {post.poll && Array.isArray(post.poll.options) && (
         <div className="poll-container">
           <div className="poll-question">📊 {post.poll.question}</div>
           <div className="poll-options">
             {post.poll.options.map((opt) => {
-              const percentage = post.poll!.totalVotes > 0 
-                ? Math.round((opt.votes / post.poll!.totalVotes) * 100) 
+              const totalVotes = post.poll!.totalVotes || 0;
+              const percentage = totalVotes > 0 
+                ? Math.round((opt.votes / totalVotes) * 100) 
                 : 0;
               const isUserVoted = post.poll!.userVotedOptionId === opt.id;
 
@@ -146,85 +147,91 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
                   <div className="poll-fill" style={{ width: `${percentage}%` }}></div>
                   <div className="poll-option-content">
                     <span className="poll-opt-text">{opt.text}</span>
-                    <span className="poll-opt-percent">{percentage}% ({opt.votes})</span>
+                    <span className="poll-opt-percent">{percentage}% ({opt.votes || 0})</span>
                   </div>
                 </button>
               );
             })}
           </div>
-          <div className="poll-footer-info">Проголосовали: {post.poll.totalVotes} соседей</div>
+          <div className="poll-footer-info">Проголосовали: {post.poll.totalVotes || 0} соседей</div>
         </div>
       )}
 
       {/* Footer Bar */}
-      <div className="post-actions-bar">
-        <button 
-          className={`action-btn ${post.userLiked ? 'liked' : ''}`}
-          onClick={() => toggleLikePost(post.id)}
-        >
-          <Heart size={18} fill={post.userLiked ? '#ef4444' : 'none'} color={post.userLiked ? '#ef4444' : 'currentColor'} />
-          <span>{post.likes}</span>
-        </button>
+      {(() => {
+        const commentsList = Array.isArray(post.comments) ? post.comments : [];
+        const likesCount = typeof post.likes === 'number' ? post.likes : 0;
 
-        <button 
-          className="action-btn"
-          onClick={() => setShowComments(!showComments)}
-        >
-          <MessageCircle size={18} />
-          <span>{post.comments.length} комментариев</span>
-        </button>
+        return (
+          <>
+            <div className="post-actions-bar">
+              <button 
+                className={`action-btn ${post.userLiked ? 'liked' : ''}`}
+                onClick={() => toggleLikePost(post.id)}
+              >
+                <Heart size={18} fill={post.userLiked ? '#ef4444' : 'none'} color={post.userLiked ? '#ef4444' : 'currentColor'} />
+                <span>{likesCount}</span>
+              </button>
 
-        <button 
-          className="action-btn"
-          onClick={() => {
-            navigator.clipboard?.writeText(window.location.href);
-            alert('Ссылка на запись скопирована!');
-          }}
-        >
-          <Share2 size={18} />
-          <span>Поделиться</span>
-        </button>
-      </div>
+              <button 
+                className="action-btn"
+                onClick={() => setShowComments(!showComments)}
+              >
+                <MessageCircle size={18} />
+                <span>{commentsList.length} комментариев</span>
+              </button>
 
-      {/* Comment Section */}
-      {showComments && (
-        <div className="comments-section">
-          <div className="comments-list">
-            {post.comments.map((c) => {
-              const isCommentMe = c.authorName === user.name;
-              const commentAvatar = isCommentMe ? user.avatar : c.authorAvatar;
-              const commentName = isCommentMe ? user.name : c.authorName;
+              <button 
+                className="action-btn"
+                onClick={() => {
+                  navigator.clipboard?.writeText(window.location.href);
+                  alert('Ссылка на запись скопирована!');
+                }}
+              >
+                <Share2 size={18} />
+                <span>Поделиться</span>
+              </button>
+            </div>
 
-              return (
-                <div key={c.id} className="comment-item">
-                  <img src={commentAvatar} alt={commentName} className="comment-avatar" />
-                  <div className="comment-bubble">
-                    <div className="comment-meta">
-                      <span className="comment-author">{commentName}</span>
-                      {c.verified && <CheckCircle2 size={13} className="text-blue" />}
-                      <span className="comment-addr">• {c.authorAddress}</span>
-                      <span className="comment-time">• {c.timestamp}</span>
-                      <button 
-                        type="button" 
-                        className="comment-reply-action-btn"
-                        onClick={() => handleStartReply(commentName)}
-                      >
-                        <Reply size={12} /> Ответить
-                      </button>
-                    </div>
+            {/* Comment Section */}
+            {showComments && (
+              <div className="comments-section">
+                <div className="comments-list">
+                  {commentsList.map((c) => {
+                    const isCommentMe = user && c.authorName === user.name;
+                    const commentAvatar = isCommentMe ? user.avatar : (c.authorAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250');
+                    const commentName = isCommentMe ? user.name : (c.authorName || 'Сосед');
 
-                    {c.replyToUser && (
-                      <div className="reply-target-badge">
-                        <Reply size={12} /> Ответ для <b>@{c.replyToUser}</b>
+                    return (
+                      <div key={c.id || Math.random()} className="comment-item">
+                        <img src={commentAvatar} alt={commentName} className="comment-avatar" />
+                        <div className="comment-bubble">
+                          <div className="comment-meta">
+                            <span className="comment-author">{commentName}</span>
+                            {c.verified && <CheckCircle2 size={13} className="text-blue" />}
+                            <span className="comment-addr">• {c.authorAddress || ''}</span>
+                            <span className="comment-time">• {c.timestamp || 'Только что'}</span>
+                            <button 
+                              type="button" 
+                              className="comment-reply-action-btn"
+                              onClick={() => handleStartReply(commentName)}
+                            >
+                              <Reply size={12} /> Ответить
+                            </button>
+                          </div>
+
+                          {c.replyToUser && (
+                            <div className="reply-target-badge">
+                              <Reply size={12} /> Ответ для <b>@{c.replyToUser}</b>
+                            </div>
+                          )}
+
+                          <p className="comment-text">{c.content}</p>
+                        </div>
                       </div>
-                    )}
-
-                    <p className="comment-text">{c.content}</p>
-                  </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
-          </div>
 
           {/* Reply Indicator Pill */}
           {replyToAuthor && (
@@ -238,7 +245,7 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
 
           {/* Quick Add Comment Form */}
           <form onSubmit={handleCommentSubmit} className="add-comment-form">
-            <img src={user.avatar} alt={user.name} className="comment-avatar" />
+            <img src={user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250'} alt={user?.name || 'Вы'} className="comment-avatar" />
             <input 
               ref={commentInputRef}
               type="text" 
@@ -252,6 +259,9 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
           </form>
         </div>
       )}
+      </>
+      );
+      })()}
 
       {/* Neighbor Profile Modal */}
       <NeighborProfileModal 
