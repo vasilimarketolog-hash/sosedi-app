@@ -1,5 +1,5 @@
 // Vercel Serverless Function for Sosedi.Online Multi-Device Real-Time Cloud Sync
-const DB_CLOUD_URL = 'https://api.restful-api.dev/objects/ff8081819ff5b11001a02369a8ad6a3d';
+const DB_CLOUD_URL = 'https://api.restful-api.dev/objects/ff808181a067127101a0686686f70495';
 
 const defaultDemoPosts = [
   {
@@ -35,17 +35,70 @@ const defaultDemoPosts = [
 let globalPosts: any[] = defaultDemoPosts;
 let globalMarketItems: any[] = [];
 
+function getPostTime(p: any): number {
+  if (!p || !p.id) return 0;
+  const matches = String(p.id).match(/\d+/g);
+  if (matches && matches.length > 0) {
+    let maxNum = 0;
+    for (const m of matches) {
+      const val = Number(m);
+      if (val > maxNum) maxNum = val;
+    }
+    if (maxNum > 100000000) return maxNum;
+    return 100000 - maxNum;
+  }
+  return 0;
+}
+
+function sortPosts(posts: any[]) {
+  posts.sort((a: any, b: any) => {
+    if (a.pinned && !b.pinned) return -1;
+    if (!a.pinned && b.pinned) return 1;
+    return getPostTime(b) - getPostTime(a);
+  });
+}
+
 async function loadFromPersistentCloud() {
   try {
     const res = await fetch(DB_CLOUD_URL);
     if (res.ok) {
       const json = await res.json();
       if (json && json.data) {
-        if (Array.isArray(json.data.posts) && json.data.posts.length > 0) {
-          globalPosts = json.data.posts;
+        const postMap = new Map();
+        // 1. Keep existing in-memory posts first
+        globalPosts.forEach((p: any) => postMap.set(p.id, p));
+
+        // 2. Merge cloud posts
+        if (Array.isArray(json.data.posts)) {
+          json.data.posts.forEach((incoming: any) => {
+            const existing = postMap.get(incoming.id);
+            if (!existing) {
+              postMap.set(incoming.id, incoming);
+            } else {
+              const commentMap = new Map();
+              (existing.comments || []).forEach((c: any) => commentMap.set(c.id, c));
+              (incoming.comments || []).forEach((c: any) => commentMap.set(c.id, c));
+              postMap.set(incoming.id, {
+                ...existing,
+                ...incoming,
+                likes: Math.max(existing.likes || 0, incoming.likes || 0),
+                comments: Array.from(commentMap.values()),
+              });
+            }
+          });
         }
-        if (Array.isArray(json.data.marketItems)) {
-          globalMarketItems = json.data.marketItems;
+
+        const merged = Array.from(postMap.values());
+        sortPosts(merged);
+        if (merged.length > 0) {
+          globalPosts = merged.slice(0, 50);
+        }
+
+        if (Array.isArray(json.data.marketItems) && json.data.marketItems.length > 0) {
+          const marketMap = new Map();
+          globalMarketItems.forEach((m: any) => marketMap.set(m.id, m));
+          json.data.marketItems.forEach((m: any) => marketMap.set(m.id, m));
+          globalMarketItems = Array.from(marketMap.values()).slice(0, 50);
         }
       }
     }
@@ -56,14 +109,37 @@ async function loadFromPersistentCloud() {
 
 async function saveToPersistentCloud(posts: any[], marketItems: any[]) {
   try {
+    // Sanitize images to keep payload under 80KB
+    const safePosts = posts.slice(0, 30).map((p: any) => {
+      const safeImages = Array.isArray(p.images)
+        ? p.images.map((img: string) => {
+            if (typeof img === 'string' && img.length > 10000) {
+              // Truncate huge base64 for cloud payload
+              return 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&q=80&w=600';
+            }
+            return img;
+          })
+        : undefined;
+
+      const cleanAvatar = p.authorAvatar && p.authorAvatar.length > 1000
+        ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250'
+        : p.authorAvatar;
+
+      return {
+        ...p,
+        authorAvatar: cleanAvatar,
+        images: safeImages,
+      };
+    });
+
     await fetch(DB_CLOUD_URL, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        name: 'sosedi_app_production_v1',
+        name: 'sosedi_app_v2',
         data: {
-          posts,
-          marketItems,
+          posts: safePosts,
+          marketItems: marketItems.slice(0, 30),
         }
       })
     });
@@ -83,7 +159,7 @@ export default async function handler(req: any, res: any) {
     return res.status(200).end();
   }
 
-  // Load latest state from persistent cloud DB on every request
+  // Load and merge latest state from persistent cloud DB on every request
   await loadFromPersistentCloud();
 
   if (req.method === 'GET') {
@@ -98,28 +174,9 @@ export default async function handler(req: any, res: any) {
       const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
       
       if (body && Array.isArray(body.posts)) {
-        const getPostTime = (p: any): number => {
-          if (!p || !p.id) return 0;
-          const matches = p.id.match(/\d+/g);
-          if (matches && matches.length > 0) {
-            let maxNum = 0;
-            for (const m of matches) {
-              const val = Number(m);
-              if (val > maxNum) maxNum = val;
-            }
-            if (maxNum > 100000000) return maxNum;
-            return 100000 - maxNum;
-          }
-          return 0;
-        };
-
         if (body.isDelete) {
           const mergedPosts = [...body.posts];
-          mergedPosts.sort((a: any, b: any) => {
-            if (a.pinned && !b.pinned) return -1;
-            if (!a.pinned && b.pinned) return 1;
-            return getPostTime(b) - getPostTime(a);
-          });
+          sortPosts(mergedPosts);
           globalPosts = mergedPosts.slice(0, 50);
         } else {
           const postMap = new Map();
@@ -147,12 +204,7 @@ export default async function handler(req: any, res: any) {
           });
 
           const mergedPosts = Array.from(postMap.values());
-          mergedPosts.sort((a: any, b: any) => {
-            if (a.pinned && !b.pinned) return -1;
-            if (!a.pinned && b.pinned) return 1;
-            return getPostTime(b) - getPostTime(a);
-          });
-
+          sortPosts(mergedPosts);
           globalPosts = mergedPosts.slice(0, 50);
         }
       }

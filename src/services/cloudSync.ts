@@ -1,6 +1,6 @@
 import { Post, MarketItem } from '../types';
 
-const DB_CLOUD_URL = 'https://api.restful-api.dev/objects/ff8081819ff5b11001a02369a8ad6a3d';
+const DB_CLOUD_URL = 'https://api.restful-api.dev/objects/ff808181a067127101a0686686f70495';
 
 const getApiUrl = () => {
   if (typeof window !== 'undefined') {
@@ -51,26 +51,70 @@ export const fetchCloudData = async (): Promise<CloudStoreData | null> => {
 
 export const syncPostsToCloud = async (posts: Post[], marketItems: MarketItem[], isDelete = false): Promise<void> => {
   try {
-    const sanitizedPosts = posts.slice(0, 40).map(p => {
+    const sanitizedPosts = posts.slice(0, 30).map(p => {
       const cleanAvatar = p.authorAvatar?.startsWith('data:')
         ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250'
         : p.authorAvatar;
+
+      const cleanImages = Array.isArray(p.images)
+        ? p.images.map(img => {
+            if (typeof img === 'string' && img.length > 10000) {
+              return 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&q=80&w=600';
+            }
+            return img;
+          })
+        : undefined;
+
       return {
         ...p,
         authorAvatar: cleanAvatar,
+        images: cleanImages,
       };
     });
 
-    await fetch(getApiUrl(), {
+    const bodyPayload = JSON.stringify({
+      posts: sanitizedPosts,
+      marketItems: marketItems.slice(0, 30),
+      isDelete,
+    });
+
+    // 1. Send to primary Vercel API
+    const res = await fetch(getApiUrl(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        posts: sanitizedPosts,
-        marketItems: marketItems.slice(0, 40),
-        isDelete,
-      }),
+      body: bodyPayload,
     });
+
+    if (!res.ok) {
+      // 2. Fail-safe direct cloud write if Vercel endpoint had any issue
+      await fetch(DB_CLOUD_URL, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'sosedi_app_v2',
+          data: {
+            posts: sanitizedPosts,
+            marketItems: marketItems.slice(0, 30),
+          }
+        }),
+      });
+    }
   } catch (err) {
-    console.warn('Failed to push to Vercel sync API:', err);
+    console.warn('Primary push failed, executing direct cloud write fallback:', err);
+    try {
+      await fetch(DB_CLOUD_URL, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'sosedi_app_v2',
+          data: {
+            posts: posts.slice(0, 30),
+            marketItems: marketItems.slice(0, 30),
+          }
+        }),
+      });
+    } catch (e2) {
+      console.warn('Direct cloud write also failed:', e2);
+    }
   }
 };
