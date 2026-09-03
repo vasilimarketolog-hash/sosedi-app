@@ -201,6 +201,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             if (!a.pinned && b.pinned) return 1;
             return getPostTime(b) - getPostTime(a);
           });
+
+          // Auto-sync: if this device has local posts not yet in the cloud, push them immediately!
+          const cloudIds = new Set((cloud.posts || []).map(p => p.id));
+          const hasLocalUnsynced = currentLocalPosts.some(p => p && p.id && !cloudIds.has(p.id) && !p.id.startsWith('p_1'));
+          if (hasLocalUnsynced) {
+            syncPostsToCloud(all, marketItems);
+          }
+
           return all;
         });
       }
