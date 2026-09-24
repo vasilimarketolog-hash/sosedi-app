@@ -321,13 +321,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             likes: 0,
             replyToUser: replyToUser || undefined,
           };
+          const existingComments = Array.isArray(p.comments) ? p.comments : [];
           return {
             ...p,
-            comments: [...p.comments, newComment],
+            comments: [...existingComments, newComment],
           };
         }
         return p;
       });
+      try {
+        localStorage.setItem('sosedi_posts', JSON.stringify(updated));
+      } catch (e) {
+        console.warn('LocalStorage save error in addComment', e);
+      }
       syncPostsToCloud(updated, marketItems);
       return updated;
     });

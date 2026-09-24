@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Post } from '../../types';
 import { useApp } from '../../context/AppContext';
 import { NeighborProfileModal } from '../Profile/NeighborProfileModal';
@@ -10,10 +10,17 @@ import {
 export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
   const { toggleLikePost, addComment, votePoll, deletePost, user } = useApp();
   const [commentText, setCommentText] = useState('');
-  const [showComments, setShowComments] = useState(false);
+  const [showComments, setShowComments] = useState(() => Boolean(post.comments && post.comments.length > 0));
   const [replyToAuthor, setReplyToAuthor] = useState<string | null>(null);
   const [selectedNeighbor, setSelectedNeighbor] = useState<{ name: string; avatar: string; address?: string; verified?: boolean } | null>(null);
   const commentInputRef = useRef<HTMLInputElement>(null);
+
+  // Automatically keep comments visible whenever post has comments
+  useEffect(() => {
+    if (post.comments && post.comments.length > 0) {
+      setShowComments(true);
+    }
+  }, [post.comments?.length]);
 
   const handleStartReply = (authorName: string) => {
     setReplyToAuthor(authorName);
