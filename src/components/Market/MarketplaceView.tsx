@@ -69,7 +69,7 @@ export const MarketplaceView: React.FC = () => {
                 {item.price === 0 ? (
                   <span className="price-badge free-badge">🎁 Отдам даром</span>
                 ) : (
-                  <span className="price-badge paid-badge">{item.price.toLocaleString('ru-RU')} ₽</span>
+                  <span className="price-badge paid-badge">{item.price.toLocaleString('ru-RU')} Br</span>
                 )}
                 {isReserved && <div className="reserved-overlay">ЗАБРОНИРОВАНО</div>}
               </div>

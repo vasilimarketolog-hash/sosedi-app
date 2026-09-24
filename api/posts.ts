@@ -152,7 +152,7 @@ export default async function handler(req: any, res: any) {
   // Allow CORS from any device / origin
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST,PUT');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST,PUT,DELETE');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') {
@@ -161,6 +161,27 @@ export default async function handler(req: any, res: any) {
 
   // Load and merge latest state from persistent cloud DB on every request
   await loadFromPersistentCloud();
+
+  // Targeted single-post deletion by ID (safe, doesn't wipe other users' posts)
+  if (req.method === 'DELETE' || (req.method === 'POST' && req.body && (req.body.action === 'delete' || req.query?.action === 'delete'))) {
+    try {
+      const body = typeof req.body === 'string' ? (req.body ? JSON.parse(req.body) : {}) : (req.body || {});
+      const targetId = req.query?.id || body.id || body.postId;
+      if (!targetId) {
+        return res.status(400).json({ error: 'Missing post id parameter' });
+      }
+      globalPosts = globalPosts.filter((p: any) => p.id !== targetId);
+      await saveToPersistentCloud(globalPosts, globalMarketItems);
+      return res.status(200).json({
+        success: true,
+        message: 'Post deleted successfully',
+        deletedId: targetId,
+        posts: globalPosts,
+      });
+    } catch (err: any) {
+      return res.status(400).json({ error: err.message });
+    }
+  }
 
   if (req.method === 'GET') {
     return res.status(200).json({
@@ -174,11 +195,7 @@ export default async function handler(req: any, res: any) {
       const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
       
       if (body && Array.isArray(body.posts)) {
-        if (body.isDelete) {
-          const mergedPosts = [...body.posts];
-          sortPosts(mergedPosts);
-          globalPosts = mergedPosts.slice(0, 50);
-        } else {
+        {
           const postMap = new Map();
 
           // 1. Add existing persistent server posts first

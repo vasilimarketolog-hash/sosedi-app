@@ -3,13 +3,13 @@ import { useApp } from '../context/AppContext';
 import { X, ShieldCheck, FileText, Smartphone, CheckCircle, Sparkles, Building, KeyRound } from 'lucide-react';
 
 export const VerificationModal: React.FC = () => {
-  const { isVerificationModalOpen, setIsVerificationModalOpen, completeVerification, user } = useApp();
+  const { isVerificationModalOpen, setIsVerificationModalOpen, completeVerification, user, currentNeighborhood } = useApp();
 
   const [step, setStep] = useState<number>(1);
-  const [building, setBuilding] = useState<string>(user.building || 'Дом 45, корпус 2');
-  const [entrance, setEntrance] = useState<number>(user.entrance || 3);
-  const [apartment, setApartment] = useState<number>(user.apartment || 112);
-  const [method, setMethod] = useState<'gosuslugi' | 'receipt' | 'code'>('gosuslugi');
+  const [building, setBuilding] = useState<string>(user?.building || 'Дом 12');
+  const [entrance, setEntrance] = useState<number>(user?.entrance || 2);
+  const [apartment, setApartment] = useState<number>(user?.apartment || 48);
+  const [method, setMethod] = useState<'neighbor' | 'receipt' | 'code'>('neighbor');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   if (!isVerificationModalOpen) return null;
@@ -19,7 +19,7 @@ export const VerificationModal: React.FC = () => {
     setIsSubmitting(true);
     setTimeout(() => {
       completeVerification(
-        `Лиговский проспект, ${building}`,
+        `${currentNeighborhood.name}, ${building}`,
         building,
         Number(entrance),
         Number(apartment)
@@ -42,8 +42,8 @@ export const VerificationModal: React.FC = () => {
               <div className="icon-badge">
                 <ShieldCheck size={28} color="#059669" />
               </div>
-              <h2>Верификация адреса проживания</h2>
-              <p>Верифицированные соседи получают синюю галочку, доступ к закрытым чатам подъезда и повышенное доверие при вызове мастеров.</p>
+              <h2>Подтверждение адреса в доме</h2>
+              <p>Подтверждённые соседи получают отметку жильца, доступ к закрытым чатам подъезда и голосованиям.</p>
             </div>
 
             <div className="form-body">
@@ -53,7 +53,7 @@ export const VerificationModal: React.FC = () => {
                   type="text" 
                   value={building} 
                   onChange={(e) => setBuilding(e.target.value)} 
-                  placeholder="Дом 45, корпус 2"
+                  placeholder="Дом 12"
                   required 
                 />
               </div>
@@ -84,16 +84,16 @@ export const VerificationModal: React.FC = () => {
               </div>
 
               <div className="form-group">
-                <label>Способ подтверждения адреса</label>
+                <label>Способ подтверждения</label>
                 <div className="methods-grid">
                   <div 
-                    className={`method-card ${method === 'gosuslugi' ? 'selected' : ''}`}
-                    onClick={() => setMethod('gosuslugi')}
+                    className={`method-card ${method === 'neighbor' ? 'selected' : ''}`}
+                    onClick={() => setMethod('neighbor')}
                   >
                     <Building size={20} className="text-emerald" />
                     <div>
-                      <div className="method-title">Госуслуги / ЕСИА</div>
-                      <div className="method-sub">Мгновенная симуляция привязки по учетной записи</div>
+                      <div className="method-title">Подтверждение соседом</div>
+                      <div className="method-sub">Любой подтверждённый жилец вашего подъезда одобряет заявку</div>
                     </div>
                   </div>
 
@@ -103,8 +103,8 @@ export const VerificationModal: React.FC = () => {
                   >
                     <FileText size={20} className="text-blue" />
                     <div>
-                      <div className="method-title">Квитанция ЖКХ</div>
-                      <div className="method-sub">Загрузка фото/PDF платежки за последний месяц</div>
+                      <div className="method-title">Квитанция / Жировка ЖКХ</div>
+                      <div className="method-sub">Загрузка фото квитанции за последний месяц (ручная модерация)</div>
                     </div>
                   </div>
 
@@ -114,8 +114,8 @@ export const VerificationModal: React.FC = () => {
                   >
                     <KeyRound size={20} className="text-amber" />
                     <div>
-                      <div className="method-title">Код от УК / Домофона</div>
-                      <div className="method-sub">Ввод уникального кода жильца от управляющей компании</div>
+                      <div className="method-title">Код от ТС / Домофона</div>
+                      <div className="method-sub">Ввод кода жильца от председателя или Товарищества собственников</div>
                     </div>
                   </div>
                 </div>
@@ -133,16 +133,16 @@ export const VerificationModal: React.FC = () => {
         {step === 2 && (
           <form onSubmit={handleSubmit}>
             <div className="modal-header">
-              <h2>Подтверждение через {method === 'gosuslugi' ? 'Госуслуги' : method === 'receipt' ? 'Квитанцию' : 'Код УК'}</h2>
-              <p>Подтверждаемый адрес: <strong>{building}, Подъезд {entrance}, Кв. {apartment}</strong></p>
+              <h2>{method === 'neighbor' ? 'Подтверждение через соседа' : method === 'receipt' ? 'Подтверждение по квитанции' : 'Ввод кода от ТС'}</h2>
+              <p>Адрес: <strong>{building}, Подъезд {entrance}, Кв. {apartment}</strong></p>
             </div>
 
             <div className="form-body">
-              {method === 'gosuslugi' && (
+              {method === 'neighbor' && (
                 <div className="verify-box gosuslugi-box">
                   <Sparkles size={24} className="text-emerald" />
-                  <p>В реальном приложении откроется шлюз авторизации Госуслуг для выписки из Росреестра.</p>
-                  <div className="simulated-badge">✓ Данные квартиры совпадают с профилем</div>
+                  <p>Запрос отправлен соседям из вашего подъезда. Как только один из жильцов подтвердит ваше проживание, статус обновится автоматически.</p>
+                  <div className="simulated-badge">✓ Заявка сформирована</div>
                 </div>
               )}
 

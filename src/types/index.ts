@@ -17,6 +17,7 @@ export interface User {
   country?: 'BY' | 'KZ';
   city?: string;
   phone: string;
+  role?: 'admin' | 'user';
 }
 
 export interface PollOption {

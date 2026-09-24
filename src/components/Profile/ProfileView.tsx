@@ -29,13 +29,32 @@ const compressAvatar = (file: File, callback: (compressedUrl: string) => void) =
 };
 
 export const ProfileView: React.FC = () => {
-  const { user, setUser, posts, setIsVerificationModalOpen, currentNeighborhood } = useApp();
+  const { user, setUser, logout, posts, setIsVerificationModalOpen, currentNeighborhood, setIsRegisteringView } = useApp();
 
   const [isEditing, setIsEditing] = useState(false);
-  const [editName, setEditName] = useState(user.name);
-  const [editBio, setEditBio] = useState(user.bio);
+  const [editName, setEditName] = useState(user?.name || '');
+  const [editBio, setEditBio] = useState(user?.bio || '');
   const [isCompressing, setIsCompressing] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  if (!user) {
+    return (
+      <div className="card profile-card guest-profile-card animate-fade-in" style={{ textAlign: 'center', padding: '50px 24px', maxWidth: 600, margin: '20px auto' }}>
+        <div style={{ fontSize: '3.5rem', marginBottom: 16 }}>👋</div>
+        <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: 8, color: '#0f172a' }}>Добро пожаловать в «Соседи.Онлайн»</h2>
+        <p style={{ color: '#64748b', maxWidth: 440, margin: '0 auto 24px', fontSize: '0.95rem', lineHeight: 1.5 }}>
+          Чтобы получить доступ к личному профилю, чатам своего подъезда и возможности публиковать записи в ЖК {currentNeighborhood.name}, войдите или зарегистрируйтесь.
+        </p>
+        <button 
+          className="btn btn-primary" 
+          onClick={() => setIsRegisteringView(true)}
+          style={{ padding: '12px 28px', fontSize: '1rem', borderRadius: 12, margin: '0 auto' }}
+        >
+          Зарегистрироваться по номеру телефона
+        </button>
+      </div>
+    );
+  }
 
   const userPosts = posts.filter(p => p.authorId === user.id);
 
@@ -45,18 +64,18 @@ export const ProfileView: React.FC = () => {
 
     setIsCompressing(true);
     compressAvatar(file, (compressedUrl) => {
-      setUser(prev => ({ ...prev, avatar: compressedUrl }));
+      setUser(prev => prev ? ({ ...prev, avatar: compressedUrl }) : null);
       setIsCompressing(false);
     });
   };
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
-    setUser(prev => ({
+    setUser(prev => prev ? ({
       ...prev,
       name: editName.trim() || prev.name,
       bio: editBio.trim() || prev.bio,
-    }));
+    }) : null);
     setIsEditing(false);
   };
 
@@ -100,6 +119,16 @@ export const ProfileView: React.FC = () => {
               >
                 <Edit3 size={14} />
                 <span>{isEditing ? 'Отмена' : 'Изменить'}</span>
+              </button>
+
+              <button 
+                type="button"
+                className="btn btn-secondary btn-sm logout-profile-btn"
+                onClick={logout}
+                title="Выйти из аккаунта на этом устройстве"
+                style={{ color: '#ef4444', borderColor: '#fecaca', background: '#fef2f2' }}
+              >
+                Выйти
               </button>
             </div>
 

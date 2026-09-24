@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext';
 import { X, Gift, Tag, DollarSign, Send } from 'lucide-react';
 
 export const CreateMarketModal: React.FC = () => {
-  const { isCreateMarketModalOpen, setIsCreateMarketModalOpen, addMarketItem, user } = useApp();
+  const { isCreateMarketModalOpen, setIsCreateMarketModalOpen, addMarketItem, user, setIsRegisteringView } = useApp();
 
   const [title, setTitle] = useState('');
   const [price, setPrice] = useState<number>(0);
@@ -14,6 +14,29 @@ export const CreateMarketModal: React.FC = () => {
   const [condition, setCondition] = useState<'new' | 'like_new' | 'used'>('like_new');
 
   if (!isCreateMarketModalOpen) return null;
+
+  if (!user) {
+    return (
+      <div className="modal-overlay" onClick={() => setIsCreateMarketModalOpen(false)}>
+        <div className="modal-content animate-fade-in" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 480, textAlign: 'center', padding: '36px 24px', background: '#fff', borderRadius: 16 }}>
+          <button className="modal-close" onClick={() => setIsCreateMarketModalOpen(false)}><X size={20} /></button>
+          <div style={{ fontSize: '3rem', marginBottom: 12 }}>📦</div>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: 8, color: '#0f172a' }}>Барахолка доступна жильцам</h2>
+          <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: 20 }}>Войдите или зарегистрируйтесь, чтобы отдавать вещи даром или продавать товары соседям своего дома.</p>
+          <button 
+            type="button" 
+            className="btn btn-primary w-full"
+            onClick={() => {
+              setIsCreateMarketModalOpen(false);
+              setIsRegisteringView(true);
+            }}
+          >
+            Войти / Регистрация
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,10 +109,10 @@ export const CreateMarketModal: React.FC = () => {
 
           {!isFree && (
             <div className="form-group">
-              <label>Цена (руб.) *</label>
+              <label>Цена (BYN / бел. руб.) *</label>
               <input 
                 type="number" 
-                placeholder="1500"
+                placeholder="45"
                 value={price}
                 onChange={(e) => setPrice(Number(e.target.value))}
                 min={0}

@@ -67,7 +67,7 @@ const MainContent: React.FC = () => {
         </button>
         <button className={activeTab === 'market' ? 'active' : ''} onClick={() => setActiveTab('market')}>
           <ShoppingBag size={20} />
-          <span>Даром</span>
+          <span>Барахолка</span>
         </button>
         <button className={activeTab === 'masters' ? 'active' : ''} onClick={() => setActiveTab('masters')}>
           <Wrench size={20} />
@@ -119,7 +119,7 @@ const MainContent: React.FC = () => {
           right: 0;
           background: #ffffff;
           border-top: 1px solid var(--border-color);
-          padding: 8px 12px;
+          padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
           justify-content: space-around;
           z-index: 900;
           box-shadow: 0 -4px 12px rgba(0,0,0,0.05);

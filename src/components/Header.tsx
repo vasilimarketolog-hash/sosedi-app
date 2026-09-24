@@ -7,6 +7,8 @@ import {
 import { RadiusScope } from '../context/AppContext';
 import { RegistrationModal } from './Auth/RegistrationModal';
 
+import { BelarusFlagSvg } from './Common/FlagIcons';
+
 export const Header: React.FC = () => {
   const { 
     user, 
@@ -50,42 +52,45 @@ export const Header: React.FC = () => {
             </div>
             <div className="logo-text-group">
               <span className="logo-title">Соседи<span className="logo-accent">.Онлайн</span></span>
-              <span className="logo-subtitle">🇧🇾 Сообщество жильцов</span>
+              <span className="logo-subtitle"><BelarusFlagSvg size={13} /> Сообщество жильцов</span>
             </div>
           </div>
-
         </div>
 
         {/* Action Buttons & User Profile */}
         <div className="actions-section">
-          {/* Registration Button */}
-          <button 
-            className="btn btn-secondary reg-nav-btn"
-            onClick={() => setIsRegisteringView(true)}
-            title="Зарегистрироваться"
-          >
-            <UserPlus size={16} />
-            <span className="btn-label-desktop">Регистрация</span>
-          </button>
+          {user ? (
+            <>
+              {/* Quick Create Button */}
+              <button 
+                className="btn btn-primary write-btn" 
+                onClick={() => activeTab === 'market' ? setIsCreateMarketModalOpen(true) : setIsCreatePostModalOpen(true)}
+                title="Написать сообщение соседям"
+              >
+                <MessageSquare size={18} />
+                <span className="btn-label-desktop">Написать</span>
+              </button>
 
-          {/* Quick Create Button (Message icon on mobile, text on desktop) */}
-          <button 
-            className="btn btn-primary write-btn" 
-            onClick={() => activeTab === 'market' ? setIsCreateMarketModalOpen(true) : setIsCreatePostModalOpen(true)}
-            title="Написать сообщение соседям"
-          >
-            <MessageSquare size={18} />
-            <span className="btn-label-desktop">Написать</span>
-          </button>
-
-          {/* User Profile Avatar Button on Far Right */}
-          <button 
-            className={`header-profile-btn ${activeTab === 'profile' ? 'active' : ''}`}
-            onClick={() => setActiveTab('profile')}
-            title="Мой профиль и настройки"
-          >
-            <img src={user.avatar} alt={user.name} className="header-avatar-img" />
-          </button>
+              {/* User Profile Avatar Button on Far Right */}
+              <button 
+                className={`header-profile-btn ${activeTab === 'profile' ? 'active' : ''}`}
+                onClick={() => setActiveTab('profile')}
+                title="Мой профиль и настройки"
+              >
+                <img src={user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250'} alt={user.name} className="header-avatar-img" />
+              </button>
+            </>
+          ) : (
+            <button 
+              className="btn btn-primary login-nav-btn"
+              onClick={() => setIsRegisteringView(true)}
+              title="Войти или зарегистрироваться"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 10 }}
+            >
+              <User size={16} />
+              <span>Войти</span>
+            </button>
+          )}
         </div>
       </div>
 

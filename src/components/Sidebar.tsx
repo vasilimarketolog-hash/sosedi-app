@@ -7,13 +7,13 @@ import {
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
-  const { activeTab, setActiveTab, currentNeighborhood, user, chats, setIsVerificationModalOpen } = useApp();
+  const { activeTab, setActiveTab, currentNeighborhood, user, chats, setIsVerificationModalOpen, setIsRegisteringView } = useApp();
 
   const totalUnreadChats = chats.reduce((acc, c) => acc + c.unreadCount, 0);
 
   const menuItems: { id: TabType; label: string; icon: React.ReactNode; badge?: string | number }[] = [
     { id: 'feed', label: 'Лента двора', icon: <Newspaper size={20} /> },
-    { id: 'market', label: 'Барахолка & Даром', icon: <ShoppingBag size={20} />, badge: '🔥 Даром' },
+    { id: 'market', label: 'Барахолка', icon: <ShoppingBag size={20} />, badge: '🔥 Даром' },
     { id: 'masters', label: 'Проверенные мастера', icon: <Wrench size={20} /> },
     { id: 'map', label: 'Карта района', icon: <MapPin size={20} /> },
     { id: 'chats', label: 'Чаты дома', icon: <MessageSquare size={20} />, badge: totalUnreadChats > 0 ? totalUnreadChats : undefined },
@@ -51,41 +51,56 @@ export const Sidebar: React.FC = () => {
         ))}
       </nav>
 
-      {/* User Profile Mini Widget */}
-      <div className="user-mini-widget">
-        <div className="user-header">
-          <img src={user.avatar} alt={user.name} className="user-avatar" />
-          <div className="user-info">
-            <div className="user-name-row">
-              <span className="user-name">{user.name}</span>
-              {user.verified && <CheckCircle2 size={15} className="text-blue" />}
+      {/* User Profile Mini Widget or Guest Card */}
+      {user ? (
+        <div className="user-mini-widget">
+          <div className="user-header">
+            <img src={user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250'} alt={user.name} className="user-avatar" />
+            <div className="user-info">
+              <div className="user-name-row">
+                <span className="user-name">{user.name}</span>
+                {user.verified && <CheckCircle2 size={15} className="text-blue" />}
+              </div>
+              <span className="user-address">{user.building ? `${user.building}, кв. ${user.apartment}` : 'Жилец дома'}</span>
             </div>
-            <span className="user-address">{user.building}, кв. {user.apartment}</span>
           </div>
-        </div>
 
-        {!user.verified ? (
-          <div className="verify-prompt">
-            <p>Вы пока не подтвердили адрес проживания.</p>
-            <button className="btn-verify-action" onClick={() => setIsVerificationModalOpen(true)}>
-              <ShieldCheck size={14} />
-              <span>Верифицировать</span>
-            </button>
-          </div>
-        ) : (
-          <div className="karma-row">
-            <div className="karma-item">
-              <span className="karma-val">⭐ {user.rating}</span>
-              <span className="karma-lbl">Рейтинг</span>
+          {!user.verified ? (
+            <div className="verify-prompt">
+              <p>Вы пока не подтвердили адрес проживания.</p>
+              <button className="btn-verify-action" onClick={() => setIsVerificationModalOpen(true)}>
+                <ShieldCheck size={14} />
+                <span>Подтвердить адрес</span>
+              </button>
             </div>
-            <div className="karma-divider"></div>
-            <div className="karma-item">
-              <span className="karma-val">❤️ {user.thanksCount}</span>
-              <span className="karma-lbl">Спасибо</span>
+          ) : (
+            <div className="karma-row">
+              <div className="karma-item">
+                <span className="karma-val">⭐ {user.rating || 5.0}</span>
+                <span className="karma-lbl">Рейтинг</span>
+              </div>
+              <div className="karma-divider"></div>
+              <div className="karma-item">
+                <span className="karma-val">❤️ {user.thanksCount || 0}</span>
+                <span className="karma-lbl">Спасибо</span>
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      ) : (
+        <div className="user-mini-widget guest-box" style={{ background: '#f8fafc', padding: 14, borderRadius: 12, border: '1px solid #e2e8f0' }}>
+          <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', marginBottom: 4 }}>Гостевой режим</div>
+          <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '0 0 10px 0', lineHeight: 1.4 }}>Войдите, чтобы писать сообщения, отдавать вещи и общаться в чатах дома.</p>
+          <button 
+            type="button" 
+            className="btn btn-primary btn-sm" 
+            onClick={() => setIsRegisteringView(true)}
+            style={{ width: '100%', justifyContent: 'center' }}
+          >
+            Войти / Регистрация
+          </button>
+        </div>
+      )}
 
       {/* Neighborhood Stats Card */}
       <div className="neighborhood-stats-card">

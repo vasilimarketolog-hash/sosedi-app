@@ -118,3 +118,19 @@ export const syncPostsToCloud = async (posts: Post[], marketItems: MarketItem[],
     }
   }
 };
+
+export const deletePostFromCloud = async (postId: string): Promise<void> => {
+  try {
+    const res = await fetch(`${getApiUrl()}?id=${encodeURIComponent(postId)}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'delete', postId }),
+    });
+
+    if (!res.ok) {
+      console.warn('DELETE /api/posts failed with status:', res.status);
+    }
+  } catch (err) {
+    console.warn('Failed to delete post from cloud API:', err);
+  }
+};

@@ -18,7 +18,7 @@ export const NeighborProfileModal: React.FC<NeighborProfileModalProps> = ({ isOp
 
   if (!isOpen) return null;
 
-  const isMe = neighbor.name === user.name;
+  const isMe = Boolean(user && neighbor.name === user.name);
 
   const handleStartDM = () => {
     onClose();

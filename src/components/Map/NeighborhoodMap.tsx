@@ -56,9 +56,9 @@ export const NeighborhoodMap: React.FC = () => {
   const [filterType, setFilterType] = useState<string>('all');
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(mapMarkers[0]);
 
-  // Coordinates centered on neighborhood
-  const centerLat = 59.9147;
-  const centerLng = 30.3582;
+  // Coordinates centered on Новая Боровая (Минск)
+  const centerLat = 53.9612;
+  const centerLng = 27.7015;
 
   const filteredMarkers = mapMarkers.filter(m => {
     if (filterType === 'all') return true;

@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 
 export const HouseChatsView: React.FC = () => {
-  const { chats, activeChatId, setActiveChatId, sendMessageToChat, user, setIsVerificationModalOpen } = useApp();
+  const { chats, activeChatId, setActiveChatId, sendMessageToChat, user, setIsVerificationModalOpen, setIsRegisteringView } = useApp();
   const [inputText, setInputText] = useState('');
   const [mobileShowChat, setMobileShowChat] = useState(false);
   const [chatFilterTab, setChatFilterTab] = useState<'all' | 'direct'>('all');
@@ -133,7 +133,7 @@ export const HouseChatsView: React.FC = () => {
         </div>
 
         {/* Unverified prompt banner for entrance chats */}
-        {!user.verified && activeChat.type === 'entrance' && (
+        {user && !user.verified && activeChat.type === 'entrance' && (
           <div className="chat-unverified-warning">
             <ShieldAlert size={18} className="text-amber" />
             <span>Это закрытый чат вашего подъезда. Подтвердите адрес для участия.</span>
@@ -146,7 +146,7 @@ export const HouseChatsView: React.FC = () => {
         {/* Message Thread */}
         <div className="messages-thread">
           {activeChat.messages.map((msg) => {
-            const isMe = msg.senderId === user.id;
+            const isMe = Boolean(user && msg.senderId === user.id);
 
             return (
               <div key={msg.id} className={`message-wrapper ${isMe ? 'my-message' : 'other-message'}`}>
@@ -167,18 +167,27 @@ export const HouseChatsView: React.FC = () => {
           })}
         </div>
 
-        {/* Message Input Form */}
-        <form onSubmit={handleSend} className="chat-input-form">
-          <input 
-            type="text" 
-            placeholder={`Написать в ${activeChat.name}...`}
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-          />
-          <button type="submit" className="btn btn-primary send-btn" disabled={!inputText.trim()}>
-            <Send size={18} />
-          </button>
-        </form>
+        {/* Message Input Form or Guest Prompt */}
+        {user ? (
+          <form onSubmit={handleSend} className="chat-input-form">
+            <input 
+              type="text" 
+              placeholder={`Написать в ${activeChat.name}...`}
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+            />
+            <button type="submit" className="btn btn-primary send-btn" disabled={!inputText.trim()}>
+              <Send size={18} />
+            </button>
+          </form>
+        ) : (
+          <div className="chat-guest-prompt" style={{ padding: '14px 20px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <span style={{ fontSize: '0.85rem', color: '#64748b' }}>Войдите в аккаунт, чтобы писать сообщения в чаты дома</span>
+            <button type="button" className="btn btn-primary btn-sm" onClick={() => setIsRegisteringView(true)}>
+              Войти
+            </button>
+          </div>
+        )}
       </div>
 
       <style>{`

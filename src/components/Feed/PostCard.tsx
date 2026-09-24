@@ -42,15 +42,15 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
   const getCategoryBadge = () => {
     switch (post.category) {
       case 'urgent':
-        return <span className="badge badge-urgent">🚨 Срочно & Инцидент</span>;
+        return <span className="badge badge-urgent">🚨 Срочно</span>;
       case 'events':
-        return <span className="badge badge-verified" style={{ background: '#f0fdf4', color: '#047857', borderColor: '#a7f3d0' }}>🎉 Событие & Праздник</span>;
+        return <span className="badge badge-verified" style={{ background: '#f0fdf4', color: '#047857', borderColor: '#a7f3d0' }}>🎉 Событие</span>;
       case 'improvements':
-        return <span className="badge badge-primary">🌿 Благоустройство</span>;
+        return <span className="badge badge-primary">🌿 Двор</span>;
       case 'uk_news':
-        return <span className="badge badge-verified">📢 УК «Лиговский Сервис»</span>;
+        return <span className="badge badge-verified">📢 УК / ТС</span>;
       default:
-        return <span className="badge badge-primary">💬 Дворовые обсуждения</span>;
+        return <span className="badge badge-primary">💬 Обсуждение</span>;
     }
   };
 
@@ -79,7 +79,15 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
           });
         };
 
-        const isMeOrAdmin = user && (post.authorId === user.id || post.authorName === user.name || user.id === 'u1' || true);
+        // Strict security: Only the post author or admin can delete
+        const isMeOrAdmin = Boolean(
+          user && (
+            (post.authorId && post.authorId === user.id) ||
+            (post.authorName && post.authorName === user.name) ||
+            user.id === 'u_admin' ||
+            user.phone === '+375290000000'
+          )
+        );
 
         const handleDeletePost = (e: React.MouseEvent) => {
           e.stopPropagation();
@@ -95,14 +103,17 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
               <div>
                 <div className="author-name-group">
                   <span className="author-name">{displayName}</span>
-                  <span title="Проверенный жилец дома"><CheckCircle2 size={15} className="text-blue" /></span>
+                  {post.verified && <span title="Адрес подтверждён соседями"><CheckCircle2 size={15} className="text-blue" /></span>}
                 </div>
-                <div className="author-timestamp-sub">{post.timestamp || 'Только что'}</div>
+                <div className="author-sub-line">
+                  <span className="author-timestamp-sub">{post.timestamp || 'Только что'}</span>
+                  <span className="author-sub-sep">•</span>
+                  {getCategoryBadge()}
+                </div>
               </div>
             </div>
 
             <div className="post-meta-actions">
-              {getCategoryBadge()}
               {isMeOrAdmin && (
                 <button 
                   type="button" 
@@ -351,6 +362,19 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
           font-weight: 700;
           font-size: 0.95rem;
           color: #0f172a;
+        }
+
+        .author-sub-line {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          margin-top: 2px;
+          flex-wrap: wrap;
+        }
+
+        .author-sub-sep {
+          color: #cbd5e1;
+          font-size: 0.75rem;
         }
 
         .author-address {

@@ -4,7 +4,7 @@ import { CategoryType } from '../types';
 import { X, Image as ImageIcon, Video, BarChart2, AlertTriangle, Send, Plus, Trash2, Calendar, Paperclip, Check } from 'lucide-react';
 
 export const CreatePostModal: React.FC = () => {
-  const { isCreatePostModalOpen, setIsCreatePostModalOpen, addPost, user } = useApp();
+  const { isCreatePostModalOpen, setIsCreatePostModalOpen, addPost, user, setIsRegisteringView } = useApp();
 
   const [category, setCategory] = useState<CategoryType>('general');
   const [title, setTitle] = useState('');
@@ -20,6 +20,29 @@ export const CreatePostModal: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isCreatePostModalOpen) return null;
+
+  if (!user) {
+    return (
+      <div className="modal-overlay" onClick={() => setIsCreatePostModalOpen(false)}>
+        <div className="modal-content animate-fade-in" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 480, textAlign: 'center', padding: '36px 24px', background: '#fff', borderRadius: 16 }}>
+          <button className="modal-close" onClick={() => setIsCreatePostModalOpen(false)}><X size={20} /></button>
+          <div style={{ fontSize: '3rem', marginBottom: 12 }}>✍️</div>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: 8, color: '#0f172a' }}>Публикация доступна жильцам</h2>
+          <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: 20 }}>Войдите или зарегистрируйтесь, чтобы писать посты, опросы и объявления в ленту вашего дома.</p>
+          <button 
+            type="button" 
+            className="btn btn-primary w-full"
+            onClick={() => {
+              setIsCreatePostModalOpen(false);
+              setIsRegisteringView(true);
+            }}
+          >
+            Войти / Регистрация
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const compressPostImage = (file: File): Promise<string> => {
     return new Promise((resolve) => {

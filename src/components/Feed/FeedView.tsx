@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 
 export const FeedView: React.FC = () => {
-  const { posts, feedCategory, setFeedCategory, setIsCreatePostModalOpen, user, setIsVerificationModalOpen, currentNeighborhood } = useApp();
+  const { posts, feedCategory, setFeedCategory, setIsCreatePostModalOpen, user, setIsVerificationModalOpen, setIsRegisteringView, currentNeighborhood } = useApp();
 
   const postsList = Array.isArray(posts) ? posts : [];
   const filteredPosts = postsList.filter(p => {
@@ -49,14 +49,17 @@ export const FeedView: React.FC = () => {
       )}
 
       {/* Quick Create Post Input Trigger */}
-      <div className="card quick-create-card" onClick={() => setIsCreatePostModalOpen(true)}>
+      <div 
+        className="card quick-create-card" 
+        onClick={() => user ? setIsCreatePostModalOpen(true) : setIsRegisteringView(true)}
+      >
         <img src={userAvatar} alt={userName} className="user-avatar-sm" />
         <div className="fake-input">
-          <span>Напишите вопрос или объявление соседям...</span>
+          <span>{user ? "Напишите вопрос или новость соседям..." : "Войдите, чтобы написать соседям..."}</span>
         </div>
-        <button className="btn btn-primary btn-sm">
+        <button className="btn btn-primary btn-sm quick-create-btn">
           <PlusCircle size={16} />
-          <span>Написать</span>
+          <span className="btn-label-desktop">Написать</span>
         </button>
       </div>
 
@@ -269,6 +272,39 @@ export const FeedView: React.FC = () => {
         .empty-feed-card p {
           font-size: 0.85rem;
           color: #64748b;
+        }
+
+        @media (max-width: 480px) {
+          .quick-create-card {
+            padding: 8px 10px;
+            gap: 8px;
+          }
+          .user-avatar-sm {
+            width: 32px;
+            height: 32px;
+            flex-shrink: 0;
+          }
+          .fake-input {
+            padding: 8px 10px;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0;
+          }
+          .quick-create-btn {
+            padding: 6px;
+            border-radius: 50%;
+            width: 34px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+          }
+          .quick-create-btn .btn-label-desktop {
+            display: none;
+          }
         }
       `}</style>
     </div>

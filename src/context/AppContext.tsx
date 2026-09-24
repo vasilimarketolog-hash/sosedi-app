@@ -13,14 +13,15 @@ import {
   initialMapMarkers, 
   initialHouseChats 
 } from '../mockData';
-import { fetchCloudData, syncPostsToCloud } from '../services/cloudSync';
+import { fetchCloudData, syncPostsToCloud, deletePostFromCloud } from '../services/cloudSync';
 
 export type TabType = 'feed' | 'market' | 'masters' | 'map' | 'chats' | 'profile';
 export type RadiusScope = 'house' | 'complex' | 'district' | 'city';
 
 interface AppContextType {
-  user: User;
-  setUser: React.Dispatch<React.SetStateAction<User>>;
+  user: User | null;
+  setUser: React.Dispatch<React.SetStateAction<User | null>>;
+  logout: () => void;
   currentNeighborhood: NeighborhoodInfo;
   setCurrentNeighborhood: (n: NeighborhoodInfo) => void;
   availableNeighborhoods: NeighborhoodInfo[];
@@ -72,14 +73,14 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User>(() => {
+  const [user, setUser] = useState<User | null>(() => {
     try {
       const saved = localStorage.getItem('sosedi_user');
       if (saved) return JSON.parse(saved);
     } catch (e) {
       console.warn('Failed to parse sosedi_user from localStorage', e);
     }
-    return initialUser;
+    return null; // Guest by default! Reading mode until registration.
   });
 
   const [currentNeighborhood, setCurrentNeighborhood] = useState<NeighborhoodInfo>(initialNeighborhood);
@@ -133,11 +134,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Sync user profile to localStorage
   useEffect(() => {
     try {
-      localStorage.setItem('sosedi_user', JSON.stringify(user));
+      if (user) {
+        localStorage.setItem('sosedi_user', JSON.stringify(user));
+      } else {
+        localStorage.removeItem('sosedi_user');
+      }
     } catch (e) {
       console.warn('LocalStorage quota exceeded for user profile', e);
     }
   }, [user]);
+
+  const logout = () => {
+    setUser(null);
+    try {
+      localStorage.removeItem('sosedi_user');
+    } catch (e) {}
+  };
 
   // Cloud Data Sync Integration with Smart Comment & Post Merging
   useEffect(() => {
@@ -201,13 +213,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             if (!a.pinned && b.pinned) return 1;
             return getPostTime(b) - getPostTime(a);
           });
-
-          // Auto-sync: if this device has local posts not yet in the cloud, push them immediately!
-          const cloudIds = new Set((cloud.posts || []).map(p => p.id));
-          const hasLocalUnsynced = currentLocalPosts.some(p => p && p.id && !cloudIds.has(p.id) && !p.id.startsWith('p_1'));
-          if (hasLocalUnsynced) {
-            syncPostsToCloud(all, marketItems);
-          }
 
           return all;
         });
@@ -284,7 +289,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (e) {
       console.warn('LocalStorage error in deletePost', e);
     }
-    await syncPostsToCloud(updated, marketItems, true);
+    await deletePostFromCloud(postId);
   };
 
   const toggleLikePost = (postId: string) => {
@@ -306,16 +311,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addComment = (postId: string, content: string, replyToUser?: string) => {
-    if (!content.trim()) return;
+    if (!content.trim() || !user) return;
+    const authorName = user.name;
+    const authorAvatar = user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250';
+    const authorAddress = user.building ? `${user.building}, Подъезд ${user.entrance}` : 'Жилец дома';
+    const verified = Boolean(user.verified);
+
     setPosts(prev => {
       const updated = prev.map(p => {
         if (p.id === postId) {
           const newComment: Comment = {
             id: `c_${Date.now()}`,
-            authorName: user.name,
-            authorAvatar: user.avatar,
-            authorAddress: `${user.building}, Подъезд ${user.entrance}`,
-            verified: user.verified,
+            authorName,
+            authorAvatar,
+            authorAddress,
+            verified,
             content,
             timestamp: 'Только что',
             likes: 0,
@@ -376,14 +386,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const sendMessageToChat = (chatId: string, text: string) => {
-    if (!text.trim()) return;
+    if (!text.trim() || !user) return;
     const newMsg = {
       id: `cm_${Date.now()}`,
       senderId: user.id,
       senderName: user.name,
-      senderAvatar: user.avatar,
-      senderAddress: `кв. ${user.apartment}`,
-      verified: user.verified,
+      senderAvatar: user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
+      senderAddress: `кв. ${user.apartment || 1}`,
+      verified: Boolean(user.verified),
       text,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
@@ -436,15 +446,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const completeVerification = (address?: string, building?: string, entrance?: number, apartment?: number) => {
-    setUser(prev => ({
-      ...prev,
-      verified: true,
-      verifiedMethod: 'Верифицирован через Росреестр / Госуслуги',
-      address: address || prev.address,
-      building: building || prev.building,
-      entrance: entrance || prev.entrance,
-      apartment: apartment || prev.apartment,
-    }));
+    setUser(prev => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        verified: true,
+        verifiedMethod: 'Адрес подтверждён жильцами дома по квитанции ЖКХ',
+        address: address || prev.address,
+        building: building || prev.building,
+        entrance: entrance || prev.entrance,
+        apartment: apartment || prev.apartment,
+      };
+    });
     setIsVerificationModalOpen(false);
   };
 
@@ -452,6 +465,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     <AppContext.Provider value={{
       user,
       setUser,
+      logout,
       currentNeighborhood,
       setCurrentNeighborhood,
       availableNeighborhoods,

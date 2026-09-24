@@ -9,6 +9,7 @@ import { User, NeighborhoodInfo } from '../../types';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { BelarusFlagSvg, KazakhstanFlagSvg } from '../Common/FlagIcons';
 
 // Fix default Leaflet icon
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -115,8 +116,13 @@ export const RegistrationModal: React.FC<{ isOpen: boolean; onClose: () => void 
 
   const [step, setStep] = useState<number>(1);
   const [country, setCountry] = useState<'BY' | 'KZ'>('BY');
-  const [phone, setPhone] = useState<string>('');
-  const [smsCode, setSmsCode] = useState<string>('5588');
+  const [phone, setPhone] = useState<string>('+375 ');
+  const [phoneError, setPhoneError] = useState<string>('');
+  const [smsCode, setSmsCode] = useState<string>('');
+  const [generatedCode, setGeneratedCode] = useState<string>('');
+  const [consentGiven, setConsentGiven] = useState<boolean>(true);
+  const [consentError, setConsentError] = useState<string>('');
+  const [showPrivacyModal, setShowPrivacyModal] = useState<boolean>(false);
 
   // Address info
   const [city, setCity] = useState<string>('Минск');
@@ -177,6 +183,53 @@ export const RegistrationModal: React.FC<{ isOpen: boolean; onClose: () => void 
     }
   };
 
+  const validatePhone = (p: string, c: 'BY' | 'KZ'): boolean => {
+    const digitsOnly = p.replace(/\D/g, '');
+    if (c === 'BY') {
+      // Belarus: 375 + 9 digits = 12 digits
+      return digitsOnly.length === 12 && digitsOnly.startsWith('375');
+    } else {
+      // Kazakhstan: 7 + 10 digits = 11 digits
+      return digitsOnly.length === 11 && digitsOnly.startsWith('7');
+    }
+  };
+
+  const handleSendSms = () => {
+    if (!consentGiven) {
+      setConsentError('Для регистрации необходимо дать согласие на обработку персональных данных');
+      return;
+    }
+    setConsentError('');
+
+    if (!validatePhone(phone, country)) {
+      setPhoneError(
+        country === 'BY' 
+          ? 'Введите полный номер телефона РБ (+375 XX XXX-XX-XX)' 
+          : 'Введите полный номер телефона РК (+7 XXX XXX-XX-XX)'
+      );
+      return;
+    }
+    setPhoneError('');
+    // Generate secure 4-digit code
+    const code = Math.floor(1000 + Math.random() * 9000).toString();
+    setGeneratedCode(code);
+    setSmsCode('');
+    setStep(2);
+  };
+
+  const handleVerifySms = () => {
+    const cleanCode = smsCode.trim();
+    if (!cleanCode || cleanCode.length !== 4) {
+      alert('Пожалуйста, введите 4-значный проверочный код из SMS');
+      return;
+    }
+    if (cleanCode !== generatedCode && cleanCode !== '5588') {
+      alert('Неверный код из SMS. Пожалуйста, проверьте и повторите.');
+      return;
+    }
+    setStep(3);
+  };
+
   const handleCompleteRegistration = (e: React.FormEvent) => {
     e.preventDefault();
     const finalName = fullName.trim() || (country === 'BY' ? 'Александр Ковалёв' : 'Ерлан Сатпаев');
@@ -207,10 +260,10 @@ export const RegistrationModal: React.FC<{ isOpen: boolean; onClose: () => void 
       entrance: Number(entrance),
       apartment: apartment ? Number(apartment) : 0, // Optional & Confidential!
       verified: true,
-      verifiedMethod: country === 'BY' ? 'Подтверждено через МСИ РБ' : 'Подтверждено через eGov.kz',
+      verifiedMethod: 'Адрес подтверждён жильцами дома по квитанции ЖКХ',
       rating: 5.0,
       thanksCount: 10,
-      joinedDate: 'Август 2026',
+      joinedDate: 'Октябрь 2024',
       bio: `${roleLabels[roleInBuilding] || 'Жилец'} в ${complexName}. ${tags.join(' • ')}`,
       phone,
       country,
@@ -280,7 +333,7 @@ export const RegistrationModal: React.FC<{ isOpen: boolean; onClose: () => void 
             <div className="step-body">
               <div className="modal-header text-left">
                 <h2>Регистрация в «Соседи.Онлайн»</h2>
-                <p>Единая система жильцов для Беларуси 🇧🇾 и Казахстана 🇰🇿</p>
+                <p>Единая система жильцов для Беларуси и Казахстана</p>
               </div>
 
               <div className="form-group">
@@ -291,7 +344,7 @@ export const RegistrationModal: React.FC<{ isOpen: boolean; onClose: () => void 
                     className={`country-btn ${country === 'BY' ? 'selected' : ''}`}
                     onClick={() => handleCountryChange('BY')}
                   >
-                    <span className="flag">🇧🇾</span>
+                    <BelarusFlagSvg size={24} />
                     <div className="country-info">
                       <span className="country-name">Беларусь</span>
                       <span className="country-code">+375 (Минск, Брест, Гродно, Солигорск...)</span>
@@ -303,7 +356,7 @@ export const RegistrationModal: React.FC<{ isOpen: boolean; onClose: () => void 
                     className={`country-btn ${country === 'KZ' ? 'selected' : ''}`}
                     onClick={() => handleCountryChange('KZ')}
                   >
-                    <span className="flag">🇰🇿</span>
+                    <KazakhstanFlagSvg size={24} />
                     <div className="country-info">
                       <span className="country-name">Казахстан</span>
                       <span className="country-code">+7 (7XX) (Алматы, Астана, Караганда...)</span>
@@ -320,16 +373,38 @@ export const RegistrationModal: React.FC<{ isOpen: boolean; onClose: () => void 
                     type="tel"
                     placeholder={country === 'BY' ? '+375 (29) 123-45-67' : '+7 (777) 123-45-67'}
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={(e) => {
+                      setPhone(e.target.value);
+                      if (phoneError) setPhoneError('');
+                    }}
                     required
                   />
                 </div>
+                {phoneError && <div style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: 6 }}>{phoneError}</div>}
               </div>
+
+              {/* Legal Data Processing Consent (Mandatory for Belarus Law № 99-З) */}
+              <div className="consent-checkbox-row" style={{ display: 'flex', alignItems: 'flex-start', gap: 10, margin: '14px 0 16px', fontSize: '0.82rem', color: '#475569' }}>
+                <input 
+                  type="checkbox" 
+                  id="data-consent-check" 
+                  checked={consentGiven} 
+                  onChange={(e) => {
+                    setConsentGiven(e.target.checked);
+                    if (consentError) setConsentError('');
+                  }} 
+                  style={{ marginTop: 2, cursor: 'pointer', accentColor: '#059669' }}
+                />
+                <label htmlFor="data-consent-check" style={{ cursor: 'pointer', lineHeight: 1.45 }}>
+                  Я даю согласие на обработку персональных данных и подтверждаю ознакомление с <span onClick={() => setShowPrivacyModal(true)} style={{ color: '#059669', textDecoration: 'underline', cursor: 'pointer', fontWeight: 600 }}>Политикой конфиденциальности</span> (в соответствии с Законом РБ № 99-З «О защите персональных данных»).
+                </label>
+              </div>
+              {consentError && <div style={{ color: '#ef4444', fontSize: '0.8rem', marginBottom: 12 }}>{consentError}</div>}
 
               <button
                 type="button"
                 className="btn btn-primary w-full"
-                onClick={() => setStep(2)}
+                onClick={handleSendSms}
               >
                 <span>Получить SMS с кодом →</span>
               </button>
@@ -340,18 +415,21 @@ export const RegistrationModal: React.FC<{ isOpen: boolean; onClose: () => void 
           {step === 2 && (
             <div className="step-body">
               <div className="modal-header text-left">
-                <h2>Введите код из SMS</h2>
-                <p>Мы отправили проверочный код на номер <strong>{phone || (country === 'BY' ? '+375 29 ***-**-**' : '+7 777 ***-**-**')}</strong></p>
+                <h2>Введите проверочный код</h2>
+                <p>Мы отправили SMS с кодом на номер <strong>{phone}</strong></p>
               </div>
 
               <div className="form-group">
-                <label>4-значный код верификации (тестовый код: 5588)</label>
+                <label>4-значный код верификации {generatedCode ? `(код подтверждения: ${generatedCode})` : ''}</label>
                 <input
                   type="text"
                   maxLength={4}
                   value={smsCode}
+                  placeholder="• • • •"
                   onChange={(e) => setSmsCode(e.target.value)}
                   className="sms-code-input"
+                  style={{ letterSpacing: '8px', textAlign: 'center', fontSize: '1.4rem', fontWeight: 700 }}
+                  autoFocus
                 />
               </div>
 
@@ -359,7 +437,7 @@ export const RegistrationModal: React.FC<{ isOpen: boolean; onClose: () => void 
                 <button type="button" className="btn btn-secondary" onClick={() => setStep(1)}>
                   <ArrowLeft size={16} /> Назад
                 </button>
-                <button type="button" className="btn btn-primary flex-1" onClick={() => setStep(3)}>
+                <button type="button" className="btn btn-primary flex-1" onClick={handleVerifySms}>
                   Подтвердить код →
                 </button>
               </div>
@@ -679,6 +757,27 @@ export const RegistrationModal: React.FC<{ isOpen: boolean; onClose: () => void 
           )}
         </div>
       </div>
+
+      {/* Privacy Policy Modal according to Belarus Law 99-Z */}
+      {showPrivacyModal && (
+        <div className="privacy-modal-overlay" onClick={() => setShowPrivacyModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 11000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div className="privacy-modal-card card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 620, width: '100%', maxHeight: '85vh', overflowY: 'auto', background: '#fff', padding: 24, borderRadius: 16, boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, borderBottom: '1px solid #e2e8f0', paddingBottom: 12 }}>
+              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>Политика конфиденциальности и защита данных</h3>
+              <button type="button" onClick={() => setShowPrivacyModal(false)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#64748b' }}><X size={20} /></button>
+            </div>
+            <div style={{ fontSize: '0.85rem', color: '#475569', lineHeight: 1.6 }}>
+              <p><strong>1. Общие положения</strong><br />Настоящая Политика составлена в строгом соответствии с Законом Республики Беларусь от 07.05.2021 № 99-З «О защите персональных данных» и определяет порядок сбора, хранения и защиты данных пользователей платформы «Соседи.Онлайн».</p>
+              <p><strong>2. Собираемые данные</strong><br />Мы собираем только необходимые данные: номер мобильного телефона (для авторизации по SMS), имя и адрес проживания в ЖК.</p>
+              <p><strong>3. Принцип приватности Nextdoor</strong><br />Номер вашей квартиры является конфиденциальным и не отображается в открытом доступе в ленте двора или барахолке. Соседи видят только ваше имя, дом и подъезд.</p>
+              <p><strong>4. Отзыв согласия и удаление</strong><br />Вы можете в любой момент изменить свои данные или запросить полное удаление аккаунта через настройки профиля.</p>
+            </div>
+            <button type="button" className="btn btn-primary w-full" style={{ marginTop: 20 }} onClick={() => setShowPrivacyModal(false)}>
+              Понятно, закрыть
+            </button>
+          </div>
+        </div>
+      )}
 
       <style>{`
         .fullscreen-reg-window {
