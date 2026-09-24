@@ -1,21 +1,33 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { PostCard } from './PostCard';
 import { CategoryType } from '../../types';
 import { 
   Sparkles, AlertCircle, PlusCircle, Filter, 
-  MessageSquare, Flame, ShieldAlert, Heart, MapPin
+  MessageSquare, Flame, ShieldAlert, Heart, MapPin, Search, X
 } from 'lucide-react';
 
 export const FeedView: React.FC = () => {
   const { posts, feedCategory, setFeedCategory, setIsCreatePostModalOpen, user, setIsVerificationModalOpen, setIsRegisteringView, currentNeighborhood } = useApp();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [visibleCount, setVisibleCount] = useState(10);
 
   const postsList = Array.isArray(posts) ? posts : [];
   const filteredPosts = postsList.filter(p => {
     if (!p) return false;
-    if (feedCategory === 'all') return true;
-    return p.category === feedCategory;
+    if (feedCategory !== 'all' && p.category !== feedCategory) return false;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      const matchTitle = p.title?.toLowerCase().includes(q);
+      const matchContent = p.content.toLowerCase().includes(q);
+      const matchAuthor = p.authorName?.toLowerCase().includes(q);
+      const matchTags = Array.isArray(p.tags) && p.tags.some(t => t.toLowerCase().includes(q));
+      return Boolean(matchTitle || matchContent || matchAuthor || matchTags);
+    }
+    return true;
   });
+
+  const displayedPosts = filteredPosts.slice(0, visibleCount);
 
   const categories: { id: CategoryType; label: string; icon: string; count?: number }[] = [
     { id: 'all', label: 'Все записи', icon: '🔥' },
@@ -63,13 +75,35 @@ export const FeedView: React.FC = () => {
         </button>
       </div>
 
+      {/* Search Input Bar */}
+      <div className="feed-search-bar card">
+        <Search size={18} className="search-icon text-muted" />
+        <input 
+          type="text" 
+          placeholder="Поиск новостей, объявлений или авторов в доме..." 
+          value={searchQuery}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            setVisibleCount(10);
+          }}
+        />
+        {searchQuery && (
+          <button className="clear-search-btn" onClick={() => setSearchQuery('')}>
+            <X size={16} />
+          </button>
+        )}
+      </div>
+
       {/* Filter Tabs */}
       <div className="category-tabs-row">
         {categories.map((cat) => (
           <button
             key={cat.id}
             className={`category-tab ${feedCategory === cat.id ? 'active' : ''} ${cat.id === 'urgent' ? 'tab-urgent' : ''}`}
-            onClick={() => setFeedCategory(cat.id)}
+            onClick={() => {
+              setFeedCategory(cat.id);
+              setVisibleCount(10);
+            }}
           >
             <span>{cat.label}</span>
           </button>
@@ -78,11 +112,23 @@ export const FeedView: React.FC = () => {
 
       {/* Posts List */}
       <div className="posts-feed-list">
-        {filteredPosts.length > 0 ? (
+        {displayedPosts.length > 0 ? (
           <>
-            {filteredPosts.map((post) => (
+            {displayedPosts.map((post) => (
               <PostCard key={post.id} post={post} />
             ))}
+
+            {filteredPosts.length > visibleCount && (
+              <div className="load-more-box" style={{ textAlign: 'center', margin: '16px 0' }}>
+                <button 
+                  className="btn btn-outline w-full load-more-btn"
+                  onClick={() => setVisibleCount(prev => prev + 10)}
+                  style={{ padding: '12px', fontWeight: 700 }}
+                >
+                  Показать ещё записи (осталось {filteredPosts.length - visibleCount})
+                </button>
+              </div>
+            )}
 
             {/* Smart Nextdoor Neighbor Feed Divider */}
             <div className="nearby-feed-divider">
@@ -100,7 +146,7 @@ export const FeedView: React.FC = () => {
                 authorId: 'u_nearby',
                 authorName: 'Артем Быков',
                 authorAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=250',
-                authorAddress: 'Соседний ЖК «Уручье», д. 8',
+                authorAddress: 'Соседний микрорайон «Уручье»',
                 verified: true,
                 timestamp: '3 часа назад',
                 category: 'improvements',
@@ -115,10 +161,25 @@ export const FeedView: React.FC = () => {
         ) : (
           <div className="empty-feed-card card">
             <MessageSquare size={48} className="text-muted" />
-            <h3>В этой категории пока нет записей</h3>
-            <p>Будьте первым, кто создаст запись во дворе!</p>
-            <button className="btn btn-primary" onClick={() => setIsCreatePostModalOpen(true)}>
-              Написать сообщение
+            <h3>{searchQuery ? 'Ничего не найдено' : 'В этой категории пока нет записей'}</h3>
+            <p>
+              {searchQuery 
+                ? `По запросу «${searchQuery}» ничего не найдено. Попробуйте другие слова.` 
+                : `Будьте первым соседом, кто создаст запись в ЖК «${currentNeighborhood.name}»!`}
+            </p>
+            <button 
+              className="btn btn-primary" 
+              onClick={() => {
+                if (searchQuery) {
+                  setSearchQuery('');
+                } else if (user) {
+                  setIsCreatePostModalOpen(true);
+                } else {
+                  setIsRegisteringView(true);
+                }
+              }}
+            >
+              {searchQuery ? 'Сбросить поиск' : 'Написать первое сообщение'}
             </button>
           </div>
         )}
@@ -186,6 +247,39 @@ export const FeedView: React.FC = () => {
         .quick-create-card:hover .fake-input {
           background: #e2e8f0;
           color: #64748b;
+        }
+
+        .feed-search-bar {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 8px 16px;
+          border-radius: 24px;
+          border: 1px solid #e2e8f0;
+          background: #ffffff;
+        }
+
+        .feed-search-bar input {
+          flex: 1;
+          border: none;
+          outline: none;
+          font-size: 0.9rem;
+          color: #0f172a;
+          background: transparent;
+        }
+
+        .clear-search-btn {
+          background: none;
+          border: none;
+          color: #94a3b8;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          padding: 2px;
+        }
+
+        .clear-search-btn:hover {
+          color: #0f172a;
         }
 
         .category-tabs-row {

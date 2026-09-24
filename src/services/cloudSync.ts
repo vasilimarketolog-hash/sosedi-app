@@ -1,4 +1,4 @@
-import { Post, MarketItem } from '../types';
+import { Post, MarketItem, HouseChat } from '../types';
 
 const DB_CLOUD_URL = 'https://api.restful-api.dev/objects/ff808181a067127101a0686686f70495';
 
@@ -12,6 +12,7 @@ const getApiUrl = () => {
 export interface CloudStoreData {
   posts: Post[];
   marketItems: MarketItem[];
+  chats?: HouseChat[];
 }
 
 export const fetchCloudData = async (): Promise<CloudStoreData | null> => {
@@ -23,6 +24,7 @@ export const fetchCloudData = async (): Promise<CloudStoreData | null> => {
         return {
           posts: json.posts,
           marketItems: Array.isArray(json.marketItems) ? json.marketItems : [],
+          chats: Array.isArray(json.chats) ? json.chats : [],
         };
       }
     }
@@ -39,6 +41,7 @@ export const fetchCloudData = async (): Promise<CloudStoreData | null> => {
         return {
           posts: json.data.posts,
           marketItems: Array.isArray(json.data.marketItems) ? json.data.marketItems : [],
+          chats: Array.isArray(json.data.chats) ? json.data.chats : [],
         };
       }
     }
@@ -49,9 +52,14 @@ export const fetchCloudData = async (): Promise<CloudStoreData | null> => {
   return null;
 };
 
-export const syncPostsToCloud = async (posts: Post[], marketItems: MarketItem[], isDelete = false): Promise<void> => {
+export const syncPostsToCloud = async (
+  posts: Post[], 
+  marketItems: MarketItem[], 
+  isDelete = false,
+  chats?: HouseChat[]
+): Promise<void> => {
   try {
-    const sanitizedPosts = posts.slice(0, 30).map(p => {
+    const sanitizedPosts = posts.slice(0, 50).map(p => {
       const cleanAvatar = p.authorAvatar?.startsWith('data:')
         ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250'
         : p.authorAvatar;
@@ -74,7 +82,8 @@ export const syncPostsToCloud = async (posts: Post[], marketItems: MarketItem[],
 
     const bodyPayload = JSON.stringify({
       posts: sanitizedPosts,
-      marketItems: marketItems.slice(0, 30),
+      marketItems: marketItems.slice(0, 50),
+      chats: chats ? chats.slice(0, 20) : undefined,
       isDelete,
     });
 
@@ -94,7 +103,8 @@ export const syncPostsToCloud = async (posts: Post[], marketItems: MarketItem[],
           name: 'sosedi_app_v2',
           data: {
             posts: sanitizedPosts,
-            marketItems: marketItems.slice(0, 30),
+            marketItems: marketItems.slice(0, 50),
+            chats: chats ? chats.slice(0, 20) : undefined,
           }
         }),
       });
@@ -108,14 +118,31 @@ export const syncPostsToCloud = async (posts: Post[], marketItems: MarketItem[],
         body: JSON.stringify({
           name: 'sosedi_app_v2',
           data: {
-            posts: posts.slice(0, 30),
-            marketItems: marketItems.slice(0, 30),
+            posts: posts.slice(0, 50),
+            marketItems: marketItems.slice(0, 50),
+            chats: chats ? chats.slice(0, 20) : undefined,
           }
         }),
       });
     } catch (e2) {
       console.warn('Direct cloud write also failed:', e2);
     }
+  }
+};
+
+export const syncChatsToCloud = async (chats: HouseChat[]): Promise<void> => {
+  try {
+    const res = await fetch(getApiUrl(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chats: chats.slice(0, 20) }),
+    });
+
+    if (!res.ok) {
+      console.warn('syncChatsToCloud returned status:', res.status);
+    }
+  } catch (err) {
+    console.warn('Failed to sync chats to cloud API:', err);
   }
 };
 

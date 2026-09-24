@@ -35,13 +35,6 @@ export const HouseChatsView: React.FC = () => {
 
     sendMessageToChat(activeChat.id, inputText);
     setInputText('');
-
-    // Simulate neighbor reply after 1.5 seconds if sending in entrance chat or auto chat
-    setTimeout(() => {
-      if (activeChat.id === 'chat_entrance') {
-        sendMessageToChat(activeChat.id, 'Спасибо за сообщение! Соседи в курсе👍');
-      }
-    }, 1500);
   };
 
   const getChatIcon = (chat: any) => {

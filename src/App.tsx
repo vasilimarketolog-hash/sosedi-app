@@ -10,9 +10,13 @@ import { RegistrationModal } from './components/Auth/RegistrationModal';
 import { FeedView } from './components/Feed/FeedView';
 import { MarketplaceView } from './components/Market/MarketplaceView';
 import { MastersView } from './components/Masters/MastersView';
-import { NeighborhoodMap } from './components/Map/NeighborhoodMap';
 import { HouseChatsView } from './components/Chats/HouseChatsView';
 import { ProfileView } from './components/Profile/ProfileView';
+import { ToastProvider } from './components/Common/Toast';
+
+const NeighborhoodMap = React.lazy(() => 
+  import('./components/Map/NeighborhoodMap').then(m => ({ default: m.NeighborhoodMap }))
+);
 
 import { Newspaper, ShoppingBag, Wrench, MapPin, MessageSquare, User } from 'lucide-react';
 
@@ -38,7 +42,11 @@ const MainContent: React.FC = () => {
       case 'masters':
         return <MastersView />;
       case 'map':
-        return <NeighborhoodMap />;
+        return (
+          <React.Suspense fallback={<div className="loading-card" style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>🗺️ Загрузка интерактивной карты двора...</div>}>
+            <NeighborhoodMap />
+          </React.Suspense>
+        );
       case 'chats':
         return <HouseChatsView />;
       case 'profile':
@@ -194,7 +202,9 @@ export default function App() {
   return (
     <ErrorBoundary>
       <AppProvider>
-        <MainContent />
+        <ToastProvider>
+          <MainContent />
+        </ToastProvider>
       </AppProvider>
     </ErrorBoundary>
   );

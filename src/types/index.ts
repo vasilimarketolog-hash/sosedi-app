@@ -42,8 +42,10 @@ export interface Comment {
   verified: boolean;
   content: string;
   timestamp: string;
+  createdAt?: string;
   likes: number;
   userLiked?: boolean;
+  likedBy?: string[];
   replyToUser?: string;
 }
 
@@ -55,12 +57,14 @@ export interface Post {
   authorAddress: string;
   verified: boolean;
   timestamp: string;
+  createdAt?: string;
   category: CategoryType;
   title?: string;
   content: string;
   images?: string[];
   likes: number;
   userLiked?: boolean;
+  likedBy?: string[];
   comments: Comment[];
   poll?: Poll;
   pinned?: boolean;

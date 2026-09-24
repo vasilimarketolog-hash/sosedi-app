@@ -2,18 +2,30 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Post } from '../../types';
 import { useApp } from '../../context/AppContext';
 import { NeighborProfileModal } from '../Profile/NeighborProfileModal';
+import { formatRelativeTime } from '../../utils/dateUtils';
+import { useToast } from '../Common/Toast';
 import { 
   Heart, MessageCircle, Share2, Pin, ShieldCheck, 
   CheckCircle2, Send, AlertTriangle, Sparkles, MoreHorizontal, Reply, X, Trash2
 } from 'lucide-react';
 
 export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
-  const { toggleLikePost, addComment, votePoll, deletePost, user } = useApp();
+  const { toggleLikePost, addComment, votePoll, deletePost, user, focusedPostId } = useApp();
+  const { showToast } = useToast();
   const [commentText, setCommentText] = useState('');
   const [showComments, setShowComments] = useState(() => Boolean(post.comments && post.comments.length > 0));
   const [replyToAuthor, setReplyToAuthor] = useState<string | null>(null);
   const [selectedNeighbor, setSelectedNeighbor] = useState<{ name: string; avatar: string; address?: string; verified?: boolean } | null>(null);
   const commentInputRef = useRef<HTMLInputElement>(null);
+  const cardRef = useRef<HTMLElement>(null);
+
+  const isFocused = focusedPostId === post.id;
+
+  useEffect(() => {
+    if (isFocused && cardRef.current) {
+      cardRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [isFocused]);
 
   // Automatically keep comments visible whenever post has comments
   useEffect(() => {
@@ -39,6 +51,26 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
     setShowComments(true);
   };
 
+  const handleShare = async () => {
+    const postUrl = `${window.location.origin}/#post/${post.id}`;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(postUrl);
+        showToast('Прямая ссылка на запись скопирована!', 'success');
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = postUrl;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        showToast('Прямая ссылка на запись скопирована!', 'success');
+      }
+    } catch (e) {
+      showToast('Не удалось скопировать ссылку', 'error');
+    }
+  };
+
   const getCategoryBadge = () => {
     switch (post.category) {
       case 'urgent':
@@ -55,7 +87,7 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
   };
 
   return (
-    <article className={`card post-card ${post.pinned ? 'pinned-post' : ''}`}>
+    <article ref={cardRef} className={`card post-card ${post.pinned ? 'pinned-post' : ''} ${isFocused ? 'highlighted-post' : ''}`}>
       {/* Pinned label if applicable */}
       {post.pinned && (
         <div className="pinned-header">
@@ -106,9 +138,10 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
                   {post.verified && <span title="Адрес подтверждён соседями"><CheckCircle2 size={15} className="text-blue" /></span>}
                 </div>
                 <div className="author-sub-line">
-                  <span className="author-timestamp-sub">{post.timestamp || 'Только что'}</span>
+                  <span className="author-timestamp-sub">{formatRelativeTime(post.createdAt || post.timestamp)}</span>
                   <span className="author-sub-sep">•</span>
                   {getCategoryBadge()}
+                  {post.id === 'p_1' && <span className="badge badge-demo" style={{ background: '#f1f5f9', color: '#64748b', fontSize: '0.68rem', padding: '2px 6px', borderRadius: '4px' }}>Пример записи</span>}
                 </div>
               </div>
             </div>
@@ -178,7 +211,9 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
       {/* Footer Bar */}
       {(() => {
         const commentsList = Array.isArray(post.comments) ? post.comments : [];
-        const likesCount = typeof post.likes === 'number' ? post.likes : 0;
+        const likesCount = (Array.isArray(post.likedBy) && post.likedBy.length > 0)
+          ? post.likedBy.length
+          : (typeof post.likes === 'number' ? post.likes : 0);
 
         return (
           <>
@@ -201,10 +236,8 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
 
               <button 
                 className="action-btn"
-                onClick={() => {
-                  navigator.clipboard?.writeText(window.location.href);
-                  alert('Ссылка на запись скопирована!');
-                }}
+                onClick={handleShare}
+                title="Скопировать прямую ссылку на запись"
               >
                 <Share2 size={18} />
                 <span>Поделиться</span>
@@ -228,7 +261,7 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
                             <span className="comment-author">{commentName}</span>
                             {c.verified && <CheckCircle2 size={13} className="text-blue" />}
                             <span className="comment-addr">• {c.authorAddress || ''}</span>
-                            <span className="comment-time">• {c.timestamp || 'Только что'}</span>
+                            <span className="comment-time">• {formatRelativeTime(c.createdAt || c.timestamp)}</span>
                             <button 
                               type="button" 
                               className="comment-reply-action-btn"
@@ -627,6 +660,18 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
 
         .send-comment-btn:disabled {
           background: #cbd5e1;
+        }
+
+        .highlighted-post {
+          border: 2px solid #10b981 !important;
+          box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2) !important;
+          animation: highlightPulse 2s ease-in-out;
+        }
+
+        @keyframes highlightPulse {
+          0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+          50% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0.2); }
+          100% { box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2); }
         }
       `}</style>
     </article>

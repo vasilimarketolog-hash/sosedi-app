@@ -4,7 +4,6 @@ import {
   HouseChat, NeighborhoodInfo, CategoryType 
 } from '../types';
 import { 
-  currentUser as initialUser, 
   currentNeighborhood as initialNeighborhood, 
   availableNeighborhoods,
   initialPosts, 
@@ -13,7 +12,7 @@ import {
   initialMapMarkers, 
   initialHouseChats 
 } from '../mockData';
-import { fetchCloudData, syncPostsToCloud, deletePostFromCloud } from '../services/cloudSync';
+import { fetchCloudData, syncPostsToCloud, deletePostFromCloud, syncChatsToCloud } from '../services/cloudSync';
 
 export type TabType = 'feed' | 'market' | 'masters' | 'map' | 'chats' | 'profile';
 export type RadiusScope = 'house' | 'complex' | 'district' | 'city';
@@ -41,6 +40,9 @@ interface AppContextType {
   toggleLikePost: (postId: string) => void;
   addComment: (postId: string, content: string, replyToUser?: string) => void;
   votePoll: (postId: string, optionId: string) => void;
+
+  focusedPostId: string | null;
+  setFocusedPostId: (id: string | null) => void;
 
   marketItems: MarketItem[];
   addMarketItem: (item: Omit<MarketItem, 'id' | 'date' | 'views'>) => void;
@@ -84,9 +86,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [currentNeighborhood, setCurrentNeighborhood] = useState<NeighborhoodInfo>(initialNeighborhood);
-  const [activeTab, setActiveTab] = useState<TabType>('feed');
+  const [activeTab, setActiveTabState] = useState<TabType>('feed');
   const [feedCategory, setFeedCategory] = useState<CategoryType>('all');
   const [radiusScope, setRadiusScope] = useState<RadiusScope>('complex');
+  const [focusedPostId, setFocusedPostId] = useState<string | null>(null);
 
   const [posts, setPosts] = useState<Post[]>(() => {
     try {
@@ -151,7 +154,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (e) {}
   };
 
-  // Cloud Data Sync Integration with Smart Comment & Post Merging
+  // Hash router & Deep Linking: #feed, #market, #masters, #map, #chats, #profile, #post/id
+  const setActiveTab = (tab: TabType) => {
+    setActiveTabState(tab);
+    if (typeof window !== 'undefined') {
+      window.location.hash = `#/${tab}`;
+    }
+  };
+
+  useEffect(() => {
+    const handleHash = () => {
+      const rawHash = window.location.hash.replace(/^#\/?/, '');
+      if (!rawHash) return;
+
+      if (rawHash.startsWith('post/')) {
+        const postId = rawHash.replace('post/', '');
+        setActiveTabState('feed');
+        setFocusedPostId(postId);
+        return;
+      }
+
+      const validTabs: TabType[] = ['feed', 'market', 'masters', 'map', 'chats', 'profile'];
+      if (validTabs.includes(rawHash as TabType)) {
+        setActiveTabState(rawHash as TabType);
+      }
+    };
+
+    handleHash();
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, []);
+
+  // Cloud Data Sync Integration with Smart Comment, Post & Chat Merging
   useEffect(() => {
     const syncFromCloud = async () => {
       const cloud = await fetchCloudData();
@@ -162,6 +196,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         const saved = localStorage.getItem('sosedi_posts');
         if (saved) currentLocalPosts = JSON.parse(saved);
+      } catch (e) {}
+
+      // Get local voted polls map
+      let localVotedPolls: Record<string, string> = {};
+      try {
+        const savedVotes = localStorage.getItem('sosedi_voted_polls');
+        if (savedVotes) localVotedPolls = JSON.parse(savedVotes);
       } catch (e) {}
 
       if (cloud.posts && Array.isArray(cloud.posts)) {
@@ -177,32 +218,75 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           cloud.posts.forEach(p => {
             const existing = map.get(p.id);
             if (!existing) {
-              map.set(p.id, p);
+              const userVoted = localVotedPolls[p.id];
+              map.set(p.id, {
+                ...p,
+                userLiked: Boolean(user && Array.isArray(p.likedBy) && p.likedBy.includes(user.id)),
+                poll: p.poll ? {
+                  ...p.poll,
+                  userVotedOptionId: userVoted || p.poll.userVotedOptionId
+                } : undefined
+              });
             } else {
               const commentMap = new Map();
               (existing.comments || []).forEach((c: any) => commentMap.set(c.id, c));
               (p.comments || []).forEach((c: any) => commentMap.set(c.id, c));
 
+              const likedBySet = new Set([
+                ...(Array.isArray(existing.likedBy) ? existing.likedBy : []),
+                ...(Array.isArray(p.likedBy) ? p.likedBy : [])
+              ]);
+              const mergedLikedBy = Array.from(likedBySet);
+              const isLiked = Boolean(user && mergedLikedBy.includes(user.id)) || Boolean(existing.userLiked);
+
+              // Merge polls
+              let mergedPoll = existing.poll || p.poll;
+              if (existing.poll && p.poll) {
+                const totalVotes = Math.max(existing.poll.totalVotes || 0, p.poll.totalVotes || 0);
+                const mergedOptions = (p.poll.options || []).map((opt: any) => {
+                  const exOpt = (existing.poll?.options || []).find((o: any) => o.id === opt.id);
+                  return {
+                    ...opt,
+                    votes: Math.max(opt.votes || 0, exOpt ? exOpt.votes || 0 : 0)
+                  };
+                });
+                mergedPoll = {
+                  ...p.poll,
+                  options: mergedOptions,
+                  totalVotes,
+                  userVotedOptionId: localVotedPolls[p.id] || existing.poll.userVotedOptionId || p.poll.userVotedOptionId
+                };
+              }
+
               map.set(p.id, {
                 ...existing,
                 ...p,
-                likes: Math.max(existing.likes || 0, p.likes || 0),
+                poll: mergedPoll,
+                likedBy: mergedLikedBy,
+                userLiked: isLiked,
+                likes: Math.max(mergedLikedBy.length, existing.likes || 0, p.likes || 0),
                 comments: Array.from(commentMap.values()),
               });
             }
           });
 
           const getPostTime = (p: any): number => {
-            if (!p || !p.id) return 0;
-            const matches = p.id.match(/\d+/g);
-            if (matches && matches.length > 0) {
-              let maxNum = 0;
-              for (const m of matches) {
-                const val = Number(m);
-                if (val > maxNum) maxNum = val;
+            if (!p) return 0;
+            if (p.createdAt) {
+              const t = new Date(p.createdAt).getTime();
+              if (!isNaN(t)) return t;
+            }
+            if (p.id) {
+              const matches = String(p.id).match(/\d+/g);
+              if (matches && matches.length > 0) {
+                let maxNum = 0;
+                for (const m of matches) {
+                  const val = Number(m);
+                  if (val > maxNum) maxNum = val;
+                }
+                if (maxNum > 100000000) return maxNum;
+                return 100000 - maxNum;
               }
-              if (maxNum > 100000000) return maxNum;
-              return 100000 - maxNum;
             }
             return 0;
           };
@@ -226,12 +310,56 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           return Array.from(map.values());
         });
       }
+
+      if (cloud.chats && Array.isArray(cloud.chats)) {
+        setChats(prev => {
+          const map = new Map<string, HouseChat>();
+          prev.forEach(c => map.set(c.id, c));
+          cloud.chats!.forEach(incChat => {
+            const existing = map.get(incChat.id);
+            if (!existing) {
+              map.set(incChat.id, incChat);
+            } else {
+              const msgMap = new Map();
+              (existing.messages || []).forEach((m: any) => msgMap.set(m.id, m));
+              (incChat.messages || []).forEach((m: any) => msgMap.set(m.id, m));
+              map.set(incChat.id, {
+                ...existing,
+                ...incChat,
+                messages: Array.from(msgMap.values()),
+              });
+            }
+          });
+          return Array.from(map.values());
+        });
+      }
     };
 
+    // Initial load
     syncFromCloud();
-    const interval = setInterval(syncFromCloud, 3000);
-    return () => clearInterval(interval);
-  }, []);
+
+    // Poll every 30 seconds only if tab is visible (Task 9)
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      syncFromCloud();
+    }, 30000);
+
+    // Sync immediately on focus or when switching back to tab
+    const handleActive = () => {
+      if (typeof document !== 'undefined' && !document.hidden) {
+        syncFromCloud();
+      }
+    };
+
+    window.addEventListener('visibilitychange', handleActive);
+    window.addEventListener('focus', handleActive);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('visibilitychange', handleActive);
+      window.removeEventListener('focus', handleActive);
+    };
+  }, [user]);
 
   // Save posts to localStorage
   useEffect(() => {
@@ -259,11 +387,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [chats]);
 
   const addPost = async (newPostData: Omit<Post, 'id' | 'timestamp' | 'likes' | 'comments'>): Promise<void> => {
+    const nowIso = new Date().toISOString();
     const newPost: Post = {
       ...newPostData,
       id: `p_${Date.now()}`,
-      timestamp: 'Только что',
+      createdAt: nowIso,
+      timestamp: nowIso,
       likes: 0,
+      likedBy: [],
       userLiked: false,
       comments: [],
     };
@@ -293,14 +424,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const toggleLikePost = (postId: string) => {
+    if (!user) {
+      setIsRegisteringView(true);
+      return;
+    }
+    const currentUserId = user.id;
+
     setPosts(prev => {
       const updated = prev.map(p => {
         if (p.id === postId) {
-          const userLiked = !p.userLiked;
+          const likedBy = Array.isArray(p.likedBy) ? [...p.likedBy] : [];
+          const hasLiked = likedBy.includes(currentUserId) || Boolean(p.userLiked);
+          let newLikedBy: string[];
+          if (hasLiked) {
+            newLikedBy = likedBy.filter(id => id !== currentUserId);
+          } else {
+            newLikedBy = [...likedBy.filter(id => id !== currentUserId), currentUserId];
+          }
+          const isNowLiked = newLikedBy.includes(currentUserId);
           return {
             ...p,
-            userLiked,
-            likes: userLiked ? p.likes + 1 : p.likes - 1,
+            likedBy: newLikedBy,
+            userLiked: isNowLiked,
+            likes: Math.max(0, newLikedBy.length),
           };
         }
         return p;
@@ -316,6 +462,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const authorAvatar = user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250';
     const authorAddress = user.building ? `${user.building}, Подъезд ${user.entrance}` : 'Жилец дома';
     const verified = Boolean(user.verified);
+    const nowIso = new Date().toISOString();
 
     setPosts(prev => {
       const updated = prev.map(p => {
@@ -327,8 +474,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             authorAddress,
             verified,
             content,
-            timestamp: 'Только что',
+            createdAt: nowIso,
+            timestamp: nowIso,
             likes: 0,
+            likedBy: [],
             replyToUser: replyToUser || undefined,
           };
           const existingComments = Array.isArray(p.comments) ? p.comments : [];
@@ -350,6 +499,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const votePoll = (postId: string, optionId: string) => {
+    // Record user vote in local storage to prevent reset
+    try {
+      const savedVotes = localStorage.getItem('sosedi_voted_polls');
+      const votesMap = savedVotes ? JSON.parse(savedVotes) : {};
+      votesMap[postId] = optionId;
+      localStorage.setItem('sosedi_voted_polls', JSON.stringify(votesMap));
+    } catch (e) {}
+
     setPosts(prev => {
       const updated = prev.map(p => {
         if (p.id === postId && p.poll && !p.poll.userVotedOptionId) {
@@ -387,6 +544,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const sendMessageToChat = (chatId: string, text: string) => {
     if (!text.trim() || !user) return;
+    const nowIso = new Date().toISOString();
     const newMsg = {
       id: `cm_${Date.now()}`,
       senderId: user.id,
@@ -395,10 +553,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       senderAddress: `кв. ${user.apartment || 1}`,
       verified: Boolean(user.verified),
       text,
+      createdAt: nowIso,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
 
-    setChats(prev => prev.map(c => {
+    const updatedChats = chats.map(c => {
       if (c.id === chatId) {
         return {
           ...c,
@@ -407,7 +566,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         };
       }
       return c;
-    }));
+    });
+
+    setChats(updatedChats);
+
+    // Sync to cloud so other neighbors receive the message in real time
+    syncChatsToCloud(updatedChats);
   };
 
   const openDirectChat = (authorName: string, authorAvatar?: string, authorAddress?: string) => {
@@ -438,7 +602,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
         ]
       };
-      setChats(prev => [newDirectChat, ...prev]);
+      const updated = [newDirectChat, ...chats];
+      setChats(updated);
+      syncChatsToCloud(updated);
     }
 
     setActiveChatId(chatId);
@@ -451,14 +617,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return {
         ...prev,
         verified: true,
-        verifiedMethod: 'Адрес подтверждён жильцами дома по квитанции ЖКХ',
-        address: address || prev.address,
-        building: building || prev.building,
-        entrance: entrance || prev.entrance,
-        apartment: apartment || prev.apartment,
+        verifiedMethod: 'Подтверждено соседями по квитанции',
+        address: address || prev.address || 'ул. Леонардо да Винчи, 2',
+        building: building || prev.building || 'ул. Леонардо да Винчи, 2',
+        entrance: entrance || prev.entrance || 1,
+        apartment: apartment || prev.apartment || 1,
       };
     });
-    setIsVerificationModalOpen(false);
   };
 
   return (
@@ -469,32 +634,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       currentNeighborhood,
       setCurrentNeighborhood,
       availableNeighborhoods,
+      
       activeTab,
       setActiveTab,
+      
       feedCategory,
       setFeedCategory,
+      
       radiusScope,
       setRadiusScope,
+
       posts,
       addPost,
       deletePost,
       toggleLikePost,
       addComment,
       votePoll,
+
+      focusedPostId,
+      setFocusedPostId,
+
       marketItems,
       addMarketItem,
       marketFilter,
       setMarketFilter,
+
       masters,
       masterCategoryFilter,
       setMasterCategoryFilter,
+
       chats,
       activeChatId,
       setActiveChatId,
       sendMessageToChat,
       openDirectChat,
+
       mapMarkers,
       completeVerification,
+
       isVerificationModalOpen,
       setIsVerificationModalOpen,
       isCreatePostModalOpen,
@@ -502,7 +679,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       isCreateMarketModalOpen,
       setIsCreateMarketModalOpen,
       isRegisteringView,
-      setIsRegisteringView
+      setIsRegisteringView,
     }}>
       {children}
     </AppContext.Provider>
@@ -511,6 +688,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
 export const useApp = () => {
   const context = useContext(AppContext);
-  if (!context) throw new Error('useApp must be used within AppProvider');
+  if (!context) {
+    throw new Error('useApp must be used within an AppProvider');
+  }
   return context;
 };
