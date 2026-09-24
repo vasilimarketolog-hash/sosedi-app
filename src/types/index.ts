@@ -140,6 +140,8 @@ export interface HouseChat {
   type: 'house' | 'entrance' | 'auto' | 'pets' | 'moms' | 'direct';
   participantAvatar?: string;
   participantAddress?: string;
+  participants?: string[];
+  partnerInfo?: Record<string, { name: string; avatar: string; address?: string }>;
   messages: ChatMessage[];
 }
 

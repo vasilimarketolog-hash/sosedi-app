@@ -543,7 +543,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const sendMessageToChat = (chatId: string, text: string) => {
-    if (!text.trim() || !user) return;
+    if (!text.trim()) return;
+    if (!user) {
+      setIsRegisteringView(true);
+      return;
+    }
+
     const nowIso = new Date().toISOString();
     const newMsg = {
       id: `cm_${Date.now()}`,
@@ -557,28 +562,65 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
 
-    const updatedChats = chats.map(c => {
-      if (c.id === chatId) {
-        return {
-          ...c,
-          messages: [...c.messages, newMsg],
+    setChats(prev => {
+      let found = false;
+      const updated = prev.map(c => {
+        if (c.id === chatId) {
+          found = true;
+          return {
+            ...c,
+            messages: [...c.messages, newMsg],
+            unreadCount: 0,
+          };
+        }
+        return c;
+      });
+
+      let finalChats = updated;
+      if (!found) {
+        const fallbackChat: HouseChat = {
+          id: chatId,
+          name: 'Личный диалог',
+          description: 'Диалог с соседом',
+          icon: '💬',
+          membersCount: 2,
           unreadCount: 0,
+          type: 'direct',
+          participants: [user.name],
+          messages: [newMsg],
         };
+        finalChats = [fallbackChat, ...prev];
       }
-      return c;
+
+      // Sync to cloud immediately
+      syncChatsToCloud(finalChats);
+      try {
+        localStorage.setItem('sosedi_chats', JSON.stringify(finalChats));
+      } catch (e) {}
+
+      return finalChats;
     });
-
-    setChats(updatedChats);
-
-    // Sync to cloud so other neighbors receive the message in real time
-    syncChatsToCloud(updatedChats);
   };
 
   const openDirectChat = (authorName: string, authorAvatar?: string, authorAddress?: string) => {
-    const chatId = `chat_dm_${authorName.replace(/\s+/g, '_')}`;
-    const existing = chats.find(c => c.id === chatId);
+    if (!user) {
+      setIsRegisteringView(true);
+      return;
+    }
 
-    if (!existing) {
+    const currentUserName = user.name;
+    if (authorName === currentUserName) return;
+
+    // Symmetric deterministic Chat ID so both parties always see the same chat
+    const sorted = [currentUserName, authorName].sort();
+    const chatId = `chat_dm_${sorted[0].replace(/\s+/g, '_')}__${sorted[1].replace(/\s+/g, '_')}`;
+
+    setChats(prev => {
+      const existing = prev.find(c => c.id === chatId);
+      if (existing) {
+        return prev;
+      }
+
       const newDirectChat: HouseChat = {
         id: chatId,
         name: authorName,
@@ -587,6 +629,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         membersCount: 2,
         unreadCount: 0,
         type: 'direct',
+        participants: [currentUserName, authorName],
+        partnerInfo: {
+          [currentUserName]: {
+            name: currentUserName,
+            avatar: user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
+            address: user.address,
+          },
+          [authorName]: {
+            name: authorName,
+            avatar: authorAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
+            address: authorAddress,
+          }
+        },
         participantAvatar: authorAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
         participantAddress: authorAddress,
         messages: [
@@ -602,10 +657,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
         ]
       };
-      const updated = [newDirectChat, ...chats];
-      setChats(updated);
+      const updated = [newDirectChat, ...prev];
       syncChatsToCloud(updated);
-    }
+      try {
+        localStorage.setItem('sosedi_chats', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
 
     setActiveChatId(chatId);
     setActiveTab('chats');

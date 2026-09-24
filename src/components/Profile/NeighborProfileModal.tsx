@@ -14,7 +14,7 @@ interface NeighborProfileModalProps {
 }
 
 export const NeighborProfileModal: React.FC<NeighborProfileModalProps> = ({ isOpen, onClose, neighbor }) => {
-  const { openDirectChat, user } = useApp();
+  const { openDirectChat, user, setIsRegisteringView } = useApp();
 
   if (!isOpen) return null;
 
@@ -22,6 +22,10 @@ export const NeighborProfileModal: React.FC<NeighborProfileModalProps> = ({ isOp
 
   const handleStartDM = () => {
     onClose();
+    if (!user) {
+      setIsRegisteringView(true);
+      return;
+    }
     openDirectChat(neighbor.name, neighbor.avatar, neighbor.address);
   };
 

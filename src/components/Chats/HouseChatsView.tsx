@@ -1,54 +1,148 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { 
   Building2, DoorOpen, Car, Dog, Send, 
-  CheckCircle2, Users, ShieldAlert, Sparkles, MessageSquare, ArrowLeft, User
+  CheckCircle2, Users, ShieldAlert, Sparkles, MessageSquare, ArrowLeft, User, Plus, X
 } from 'lucide-react';
+import { HouseChat } from '../../types';
 
 export const HouseChatsView: React.FC = () => {
-  const { chats, activeChatId, setActiveChatId, sendMessageToChat, user, setIsVerificationModalOpen, setIsRegisteringView } = useApp();
+  const { 
+    chats, activeChatId, setActiveChatId, sendMessageToChat, 
+    user, setIsVerificationModalOpen, setIsRegisteringView, openDirectChat 
+  } = useApp();
+
   const [inputText, setInputText] = useState('');
   const [mobileShowChat, setMobileShowChat] = useState(false);
   const [chatFilterTab, setChatFilterTab] = useState<'all' | 'direct'>('all');
+  const [showNewDirectModal, setShowNewDirectModal] = useState(false);
 
-  React.useEffect(() => {
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
     if (activeChatId) {
       setMobileShowChat(true);
+      setTimeout(() => inputRef.current?.focus(), 150);
     }
   }, [activeChatId]);
 
-  const activeChat = chats.find(c => c.id === activeChatId) || chats[0];
+  // Dynamic resolution of direct chat partner (so both users see the OTHER person's name & avatar)
+  const getDirectChatMeta = (chat: HouseChat) => {
+    if (chat.type !== 'direct') {
+      return {
+        name: chat.name,
+        avatar: chat.participantAvatar,
+        address: chat.participantAddress || `${chat.membersCount} участников`,
+        desc: chat.description,
+      };
+    }
+
+    if (user && chat.participants && Array.isArray(chat.participants)) {
+      const partnerName = chat.participants.find((p: string) => p !== user.name);
+      if (partnerName) {
+        const partnerInfo = chat.partnerInfo && chat.partnerInfo[partnerName];
+        return {
+          name: partnerName,
+          avatar: partnerInfo?.avatar || chat.participantAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
+          address: partnerInfo?.address || chat.participantAddress || 'Сосед по ЖК',
+          desc: `Личный диалог с соседом ${partnerName}`,
+        };
+      }
+    }
+
+    return {
+      name: chat.name,
+      avatar: chat.participantAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
+      address: chat.participantAddress || 'Личный диалог',
+      desc: chat.description || 'Личный диалог',
+    };
+  };
 
   const filteredChats = chats.filter(c => {
-    if (chatFilterTab === 'direct') return c.type === 'direct';
+    if (chatFilterTab === 'direct') {
+      if (c.type !== 'direct') return false;
+      // If user logged in, only show DMs where user is a participant or creator
+      if (user && c.participants && Array.isArray(c.participants)) {
+        return c.participants.includes(user.name);
+      }
+      return true;
+    }
     return true;
   });
+
+  const activeChat: HouseChat = chats.find(c => c.id === activeChatId) 
+    || (chatFilterTab === 'direct' && filteredChats.length > 0 ? filteredChats[0] : chats[0])
+    || {
+      id: 'chat_house',
+      name: '🏢 Общий чат дома',
+      description: 'Официальный чат жителей дома',
+      icon: 'Building2',
+      membersCount: 142,
+      unreadCount: 0,
+      type: 'house',
+      messages: [],
+    };
+
+  const activeChatMeta = getDirectChatMeta(activeChat);
+
+  // Auto-scroll to bottom on new message
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [activeChat?.messages?.length, activeChat?.id]);
 
   const handleSelectChat = (id: string) => {
     setActiveChatId(id);
     setMobileShowChat(true);
+    setTimeout(() => inputRef.current?.focus(), 150);
   };
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim()) return;
 
+    if (!user) {
+      setIsRegisteringView(true);
+      return;
+    }
+
     sendMessageToChat(activeChat.id, inputText);
     setInputText('');
+    setTimeout(() => inputRef.current?.focus(), 50);
   };
 
-  const getChatIcon = (chat: any) => {
-    if (chat.type === 'direct' && chat.participantAvatar) {
-      return <img src={chat.participantAvatar} alt={chat.name} className="direct-avatar-icon" />;
+  const getChatIcon = (chat: HouseChat) => {
+    if (chat.type === 'direct') {
+      const meta = getDirectChatMeta(chat);
+      if (meta.avatar) {
+        return <img src={meta.avatar} alt={meta.name} className="direct-avatar-icon" />;
+      }
+      return <MessageSquare size={20} className="text-emerald" />;
     }
     switch (chat.type) {
       case 'house': return <Building2 size={20} className="text-emerald" />;
       case 'entrance': return <DoorOpen size={20} className="text-blue" />;
       case 'auto': return <Car size={20} className="text-amber" />;
       case 'pets': return <Dog size={20} className="text-purple" />;
-      case 'direct': return <MessageSquare size={20} className="text-emerald" />;
       default: return <MessageSquare size={20} />;
     }
+  };
+
+  // Available neighbors list for quick DM initiation
+  const neighborContacts = [
+    { name: 'наташа жена', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=250', address: 'д. 45, Подъезд 3, кв. 112' },
+    { name: 'Михаил Ковалёв', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=250', address: 'ул. Леонардо да Винчи, 2, Подъезд 2' },
+    { name: 'Ольга Петрова', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=250', address: 'ул. Леонардо да Винчи, 2, Подъезд 1' },
+    { name: 'Екатерина Морозова', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=250', address: 'ул. Леонардо да Винчи, 2, Подъезд 3' },
+    { name: 'Игорь Мельников', avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=250', address: 'ул. Леонардо да Винчи, 4, Подъезд 2' },
+    { name: 'Александр Романов', avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=250', address: 'Сантехник, дом 2' },
+  ].filter(n => !user || n.name !== user.name);
+
+  const handleStartNeighborDM = (neighbor: { name: string; avatar: string; address?: string }) => {
+    setShowNewDirectModal(false);
+    openDirectChat(neighbor.name, neighbor.avatar, neighbor.address);
+    setChatFilterTab('direct');
+    setMobileShowChat(true);
   };
 
   return (
@@ -72,33 +166,46 @@ export const HouseChatsView: React.FC = () => {
               💬 Личные (ЛС)
             </button>
           </div>
+
+          {/* Quick Direct Message button */}
+          <button 
+            type="button"
+            className="btn btn-primary btn-sm new-dm-btn"
+            onClick={() => user ? setShowNewDirectModal(true) : setIsRegisteringView(true)}
+          >
+            <Plus size={15} />
+            <span>Написать соседу в ЛС</span>
+          </button>
         </div>
 
         <div className="chats-list">
           {filteredChats.length > 0 ? (
-            filteredChats.map((chat) => (
-              <button
-                key={chat.id}
-                className={`chat-item-btn ${chat.id === activeChat.id ? 'active' : ''}`}
-                onClick={() => handleSelectChat(chat.id)}
-              >
-                <div className="chat-item-icon">{getChatIcon(chat)}</div>
-                <div className="chat-item-info">
-                  <div className="chat-item-name">{chat.name}</div>
-                  <div className="chat-item-sub">
-                    {chat.type === 'direct' ? (chat.participantAddress || 'Личный диалог') : `${chat.membersCount} участников`}
+            filteredChats.map((chat) => {
+              const meta = getDirectChatMeta(chat);
+              const isActive = chat.id === activeChat.id;
+
+              return (
+                <button
+                  key={chat.id}
+                  className={`chat-item-btn ${isActive ? 'active' : ''}`}
+                  onClick={() => handleSelectChat(chat.id)}
+                >
+                  <div className="chat-item-icon">{getChatIcon(chat)}</div>
+                  <div className="chat-item-info">
+                    <div className="chat-item-name">{meta.name}</div>
+                    <div className="chat-item-sub">{meta.address}</div>
                   </div>
-                </div>
-                {chat.unreadCount > 0 && (
-                  <span className="unread-badge">{chat.unreadCount}</span>
-                )}
-              </button>
-            ))
+                  {chat.unreadCount > 0 && (
+                    <span className="unread-badge">{chat.unreadCount}</span>
+                  )}
+                </button>
+              );
+            })
           ) : (
             <div className="empty-chats-notice">
               <MessageSquare size={32} className="text-muted" />
               <p>У вас пока нет личных диалогов</p>
-              <span className="sub-notice">Нажмите на имя любого соседа под постом, чтобы написать в ЛС.</span>
+              <span className="sub-notice">Нажмите кнопку «Написать соседу в ЛС» выше, чтобы начать диалог.</span>
             </div>
           )}
         </div>
@@ -115,9 +222,9 @@ export const HouseChatsView: React.FC = () => {
             </button>
             <div className="chat-title-row">
               {getChatIcon(activeChat)}
-              <h2>{activeChat.name}</h2>
+              <h2>{activeChatMeta.name}</h2>
             </div>
-            <p className="chat-desc">{activeChat.description}</p>
+            <p className="chat-desc">{activeChatMeta.desc}</p>
           </div>
           <div className="members-badge">
             {activeChat.type === 'direct' ? <User size={14} /> : <Users size={14} />} 
@@ -138,50 +245,110 @@ export const HouseChatsView: React.FC = () => {
 
         {/* Message Thread */}
         <div className="messages-thread">
-          {activeChat.messages.map((msg) => {
-            const isMe = Boolean(user && msg.senderId === user.id);
+          {activeChat.messages && activeChat.messages.length > 0 ? (
+            activeChat.messages.map((msg) => {
+              const isMe = Boolean(user && (msg.senderId === user.id || msg.senderName === user.name));
 
-            return (
-              <div key={msg.id} className={`message-wrapper ${isMe ? 'my-message' : 'other-message'}`}>
-                {!isMe && <img src={msg.senderAvatar} alt={msg.senderName} className="msg-avatar" />}
-                <div className="msg-bubble">
-                  {!isMe && (
-                    <div className="msg-sender-meta">
-                      <span className="msg-sender-name">{msg.senderName}</span>
-                      {msg.verified && <CheckCircle2 size={12} className="text-blue" />}
-                      <span className="msg-sender-addr">• {msg.senderAddress}</span>
-                    </div>
-                  )}
-                  <p className="msg-text">{msg.text}</p>
-                  <span className="msg-time">{msg.timestamp}</span>
+              return (
+                <div key={msg.id} className={`message-wrapper ${isMe ? 'my-message' : 'other-message'}`}>
+                  {!isMe && <img src={msg.senderAvatar} alt={msg.senderName} className="msg-avatar" />}
+                  <div className="msg-bubble">
+                    {!isMe && (
+                      <div className="msg-sender-meta">
+                        <span className="msg-sender-name">{msg.senderName}</span>
+                        {msg.verified && <CheckCircle2 size={12} className="text-blue" />}
+                        <span className="msg-sender-addr">• {msg.senderAddress}</span>
+                      </div>
+                    )}
+                    <p className="msg-text">{msg.text}</p>
+                    <span className="msg-time">{msg.timestamp}</span>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          ) : (
+            <div className="empty-thread-notice" style={{ textAlign: 'center', margin: 'auto', color: '#94a3b8' }}>
+              <MessageSquare size={36} style={{ margin: '0 auto 8px', opacity: 0.5 }} />
+              <p style={{ fontWeight: 600 }}>В этом диалоге ещё нет сообщений</p>
+              <span style={{ fontSize: '0.8rem' }}>Напишите первое сообщение соседу в поле внизу!</span>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
         </div>
 
         {/* Message Input Form or Guest Prompt */}
         {user ? (
           <form onSubmit={handleSend} className="chat-input-form">
             <input 
+              ref={inputRef}
               type="text" 
-              placeholder={`Написать в ${activeChat.name}...`}
+              placeholder={activeChat.type === 'direct' ? `Написать в ЛС ${activeChatMeta.name}...` : `Написать в ${activeChat.name}...`}
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
+              autoFocus
             />
             <button type="submit" className="btn btn-primary send-btn" disabled={!inputText.trim()}>
               <Send size={18} />
             </button>
           </form>
         ) : (
-          <div className="chat-guest-prompt" style={{ padding: '14px 20px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-            <span style={{ fontSize: '0.85rem', color: '#64748b' }}>Войдите в аккаунт, чтобы писать сообщения в чаты дома</span>
-            <button type="button" className="btn btn-primary btn-sm" onClick={() => setIsRegisteringView(true)}>
+          <div 
+            className="chat-guest-prompt" 
+            onClick={() => setIsRegisteringView(true)}
+            style={{ 
+              padding: '14px 20px', 
+              background: '#f8fafc', 
+              borderTop: '1px solid #e2e8f0', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between', 
+              gap: 12,
+              cursor: 'pointer'
+            }}
+          >
+            <span style={{ fontSize: '0.88rem', color: '#64748b' }}>
+              💬 Войдите или зарегистрируйтесь, чтобы написать в ЛС
+            </span>
+            <button type="button" className="btn btn-primary btn-sm">
               Войти
             </button>
           </div>
         )}
       </div>
+
+      {/* Select Neighbor Modal for Direct Chat */}
+      {showNewDirectModal && (
+        <div className="modal-overlay" onClick={() => setShowNewDirectModal(false)}>
+          <div className="modal-content new-direct-modal animate-fade-in" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Кому вы хотите написать?</h3>
+              <button className="modal-close" onClick={() => setShowNewDirectModal(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <p className="modal-sub">Выберите соседа по ЖК «Новая Боровая» для начала личного диалога:</p>
+
+            <div className="neighbor-select-list">
+              {neighborContacts.map((neighbor) => (
+                <div 
+                  key={neighbor.name} 
+                  className="neighbor-select-item"
+                  onClick={() => handleStartNeighborDM(neighbor)}
+                >
+                  <img src={neighbor.avatar} alt={neighbor.name} className="neighbor-select-avatar" />
+                  <div className="neighbor-select-info">
+                    <span className="neighbor-select-name">{neighbor.name}</span>
+                    <span className="neighbor-select-addr">{neighbor.address}</span>
+                  </div>
+                  <button className="btn btn-primary btn-sm">
+                    Написать
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         .chats-view-container {
@@ -189,10 +356,11 @@ export const HouseChatsView: React.FC = () => {
           display: flex;
           height: 640px;
           overflow: hidden;
+          position: relative;
         }
 
         .chats-sidebar {
-          width: 300px;
+          width: 320px;
           border-right: 1px solid var(--border-color);
           display: flex;
           flex-direction: column;
@@ -224,10 +392,10 @@ export const HouseChatsView: React.FC = () => {
 
         .chat-tab-btn {
           flex: 1;
-          padding: 5px 8px;
+          padding: 6px 10px;
           border-radius: 16px;
           border: none;
-          font-size: 0.76rem;
+          font-size: 0.78rem;
           font-weight: 700;
           color: #475569;
           background: transparent;
@@ -239,6 +407,17 @@ export const HouseChatsView: React.FC = () => {
           background: #ffffff;
           color: #059669;
           box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+        }
+
+        .new-dm-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          width: 100%;
+          font-size: 0.82rem;
+          padding: 8px 12px;
+          border-radius: 20px;
         }
 
         .chats-list {
@@ -257,6 +436,10 @@ export const HouseChatsView: React.FC = () => {
           padding: 12px;
           border-radius: 10px;
           text-align: left;
+          border: none;
+          background: transparent;
+          cursor: pointer;
+          width: 100%;
           transition: background 0.15s ease;
         }
 
@@ -315,6 +498,8 @@ export const HouseChatsView: React.FC = () => {
           padding: 4px 10px;
           border-radius: 16px;
           margin-bottom: 6px;
+          border: none;
+          cursor: pointer;
         }
 
         .chat-header {
@@ -450,6 +635,12 @@ export const HouseChatsView: React.FC = () => {
           border: 1px solid #cbd5e1;
           border-radius: 24px;
           font-size: 0.88rem;
+          outline: none;
+        }
+
+        .chat-input-form input:focus {
+          border-color: #059669;
+          box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.15);
         }
 
         .send-btn {
@@ -458,6 +649,74 @@ export const HouseChatsView: React.FC = () => {
           height: 40px;
           padding: 0;
           flex-shrink: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        /* New Direct Chat Modal */
+        .new-direct-modal {
+          max-width: 440px;
+          padding: 20px;
+        }
+
+        .modal-sub {
+          font-size: 0.85rem;
+          color: #64748b;
+          margin: 6px 0 16px;
+        }
+
+        .neighbor-select-list {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          max-height: 340px;
+          overflow-y: auto;
+        }
+
+        .neighbor-select-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 10px;
+          border-radius: 12px;
+          border: 1px solid #e2e8f0;
+          background: #ffffff;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+
+        .neighbor-select-item:hover {
+          border-color: #059669;
+          background: #f0fdf4;
+        }
+
+        .neighbor-select-avatar {
+          width: 42px;
+          height: 42px;
+          border-radius: 50%;
+          object-fit: cover;
+        }
+
+        .neighbor-select-info {
+          flex: 1;
+          min-width: 0;
+        }
+
+        .neighbor-select-name {
+          display: block;
+          font-weight: 700;
+          font-size: 0.9rem;
+          color: #0f172a;
+        }
+
+        .neighbor-select-addr {
+          display: block;
+          font-size: 0.76rem;
+          color: #64748b;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
         @media (max-width: 768px) {

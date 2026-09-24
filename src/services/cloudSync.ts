@@ -135,14 +135,35 @@ export const syncChatsToCloud = async (chats: HouseChat[]): Promise<void> => {
     const res = await fetch(getApiUrl(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chats: chats.slice(0, 20) }),
+      body: JSON.stringify({ chats: chats.slice(0, 30) }),
     });
 
     if (!res.ok) {
-      console.warn('syncChatsToCloud returned status:', res.status);
+      await fetch(DB_CLOUD_URL, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'sosedi_app_v2',
+          data: {
+            chats: chats.slice(0, 30),
+          }
+        }),
+      });
     }
   } catch (err) {
     console.warn('Failed to sync chats to cloud API:', err);
+    try {
+      await fetch(DB_CLOUD_URL, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'sosedi_app_v2',
+          data: {
+            chats: chats.slice(0, 30),
+          }
+        }),
+      });
+    } catch (e2) {}
   }
 };
 
