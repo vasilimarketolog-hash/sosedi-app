@@ -21,7 +21,9 @@ const NeighborhoodMap = React.lazy(() =>
 import { Newspaper, ShoppingBag, Wrench, MapPin, MessageSquare, User } from 'lucide-react';
 
 const MainContent: React.FC = () => {
-  const { activeTab, setActiveTab, isRegisteringView, setIsRegisteringView } = useApp();
+  const { activeTab, setActiveTab, isRegisteringView, setIsRegisteringView, user, chats } = useApp();
+
+  const totalUnreadChats = chats.reduce((acc, c) => acc + (c.unreadCount || 0), 0);
 
   // If user clicked Registration, render dedicated Registration Page screen!
   if (isRegisteringView) {
@@ -77,17 +79,37 @@ const MainContent: React.FC = () => {
           <ShoppingBag size={20} />
           <span>Барахолка</span>
         </button>
+        <button className={activeTab === 'chats' ? 'active' : ''} onClick={() => setActiveTab('chats')} style={{ position: 'relative' }}>
+          <MessageSquare size={20} />
+          <span>Чаты</span>
+          {totalUnreadChats > 0 && (
+            <span className="mobile-nav-badge">{totalUnreadChats}</span>
+          )}
+        </button>
         <button className={activeTab === 'masters' ? 'active' : ''} onClick={() => setActiveTab('masters')}>
           <Wrench size={20} />
           <span>Мастера</span>
         </button>
-        <button className={activeTab === 'map' ? 'active' : ''} onClick={() => setActiveTab('map')}>
-          <MapPin size={20} />
-          <span>Карта</span>
-        </button>
-        <button className={activeTab === 'chats' ? 'active' : ''} onClick={() => setActiveTab('chats')}>
-          <MessageSquare size={20} />
-          <span>Чаты</span>
+        <button 
+          className={activeTab === 'profile' ? 'active' : ''} 
+          onClick={() => {
+            if (user) {
+              setActiveTab('profile');
+            } else {
+              setIsRegisteringView(true);
+            }
+          }}
+        >
+          {user ? (
+            <img 
+              src={user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250'} 
+              alt={user.name} 
+              style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #059669' }} 
+            />
+          ) : (
+            <User size={20} />
+          )}
+          <span>{user ? 'Профиль' : 'Войти'}</span>
         </button>
       </nav>
 
@@ -145,6 +167,19 @@ const MainContent: React.FC = () => {
 
         .mobile-bottom-nav button.active {
           color: #059669;
+        }
+
+        .mobile-nav-badge {
+          position: absolute;
+          top: 3px;
+          right: calc(50% - 16px);
+          background: #ef4444;
+          color: #ffffff;
+          font-size: 0.65rem;
+          font-weight: 700;
+          border-radius: 9999px;
+          padding: 1px 5px;
+          line-height: 1;
         }
 
         @media (max-width: 900px) {

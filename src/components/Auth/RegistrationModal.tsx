@@ -525,6 +525,8 @@ export const RegistrationModal: React.FC<{ isOpen: boolean; onClose: () => void 
                   <MapContainer
                     center={selectedCoords}
                     zoom={14}
+                    scrollWheelZoom={false}
+                    dragging={typeof window !== 'undefined' && window.innerWidth > 640}
                     style={{ width: '100%', height: '220px', borderRadius: '12px' }}
                   >
                     <TileLayer

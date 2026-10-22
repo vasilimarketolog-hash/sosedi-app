@@ -4,13 +4,27 @@ import { PostCard } from './PostCard';
 import { CategoryType } from '../../types';
 import { 
   Sparkles, AlertCircle, PlusCircle, Filter, 
-  MessageSquare, Flame, ShieldAlert, Heart, MapPin, Search, X
+  MessageSquare, Flame, ShieldAlert, Heart, MapPin, Search, X, Share2
 } from 'lucide-react';
 
 export const FeedView: React.FC = () => {
   const { posts, feedCategory, setFeedCategory, setIsCreatePostModalOpen, user, setIsVerificationModalOpen, setIsRegisteringView, currentNeighborhood } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [visibleCount, setVisibleCount] = useState(10);
+
+  const handleShareInvite = () => {
+    const shareData = {
+      title: `Соседи.Онлайн — ${currentNeighborhood.name}`,
+      text: `Привет! Заходи в чат и барахолку нашего дома (${currentNeighborhood.name}). Здесь отдают вещи даром, делятся проверенными мастерами и общаются:`,
+      url: window.location.origin,
+    };
+    if (navigator.share) {
+      navigator.share(shareData).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(window.location.origin);
+      alert('Ссылка скопирована! Отправьте её в домовой чат Telegram или Viber.');
+    }
+  };
 
   const postsList = Array.isArray(posts) ? posts : [];
   const filteredPosts = postsList.filter(p => {
@@ -72,6 +86,21 @@ export const FeedView: React.FC = () => {
         <button className="btn btn-primary btn-sm quick-create-btn">
           <PlusCircle size={16} />
           <span className="btn-label-desktop">Написать</span>
+        </button>
+      </div>
+
+      {/* Viral Invite Card for Telegram / Viber group chats */}
+      <div className="invite-house-banner card">
+        <div className="invite-banner-content">
+          <div className="invite-icon-box">📢</div>
+          <div className="invite-text-box">
+            <div className="invite-title">Домовой чат и барахолка: {currentNeighborhood.name}</div>
+            <div className="invite-desc">Отправьте ссылку в чат вашего дома или подъезда (Telegram / Viber), чтобы соседи присоединялись!</div>
+          </div>
+        </div>
+        <button className="btn btn-primary btn-sm invite-share-action" onClick={handleShareInvite}>
+          <Share2 size={16} />
+          <span>Переслать в чат дома</span>
         </button>
       </div>
 
@@ -247,6 +276,59 @@ export const FeedView: React.FC = () => {
         .quick-create-card:hover .fake-input {
           background: #e2e8f0;
           color: #64748b;
+        }
+
+        .invite-house-banner {
+          background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+          border: 1px solid #bbf7d0;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 14px;
+          padding: 14px 18px;
+        }
+
+        .invite-banner-content {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .invite-icon-box {
+          font-size: 1.6rem;
+          flex-shrink: 0;
+        }
+
+        .invite-title {
+          font-weight: 700;
+          font-size: 0.92rem;
+          color: #166534;
+        }
+
+        .invite-desc {
+          font-size: 0.78rem;
+          color: #15803d;
+          line-height: 1.35;
+        }
+
+        .invite-share-action {
+          flex-shrink: 0;
+          white-space: nowrap;
+          background: #059669;
+          font-weight: 600;
+        }
+
+        @media (max-width: 640px) {
+          .invite-house-banner {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 12px 14px;
+          }
+          .invite-share-action {
+            width: 100%;
+            justify-content: center;
+          }
         }
 
         .feed-search-bar {

@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { 
   Building2, MapPin, PlusCircle, MessageSquare, 
-  ChevronDown, CheckCircle2, UserPlus, User
+  ChevronDown, CheckCircle2, UserPlus, User, Share2
 } from 'lucide-react';
 import { RadiusScope } from '../context/AppContext';
 import { RegistrationModal } from './Auth/RegistrationModal';
@@ -41,6 +41,20 @@ export const Header: React.FC = () => {
     };
   }, []);
 
+  const handleShareInvite = () => {
+    const shareData = {
+      title: `Соседи.Онлайн — ${currentNeighborhood.name}`,
+      text: `Привет! Заходи в чат и барахолку нашего дома (${currentNeighborhood.name}). Здесь отдают вещи даром, делятся контактами проверенных мастеров и обсуждают новости двора:`,
+      url: window.location.origin,
+    };
+    if (navigator.share) {
+      navigator.share(shareData).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(window.location.origin);
+      alert('Ссылка на наш ЖК скопирована в буфер обмена! Отправьте её в домовой чат Telegram или Viber.');
+    }
+  };
+
   return (
     <header className="sticky-header">
       <div className="header-container">
@@ -55,10 +69,56 @@ export const Header: React.FC = () => {
               <span className="logo-subtitle"><BelarusFlagSvg size={13} /> Сообщество жильцов</span>
             </div>
           </div>
+
+          {/* Neighborhood Selector Dropdown (Desktop & Mobile) */}
+          <div className="dropdown-wrapper" ref={neighborhoodRef}>
+            <button 
+              className="neighborhood-selector-btn"
+              onClick={() => setIsNeighborhoodMenuOpen(!isNeighborhoodMenuOpen)}
+              title="Выбрать ЖК или микрорайон (Минск & Барановичи)"
+            >
+              <MapPin size={15} className="text-emerald" style={{ flexShrink: 0 }} />
+              <span className="neighborhood-current-name">{currentNeighborhood.name}</span>
+              <ChevronDown size={14} className="text-muted" style={{ flexShrink: 0 }} />
+            </button>
+
+            {isNeighborhoodMenuOpen && (
+              <div className="dropdown-menu">
+                <div className="dropdown-header">Минск & Барановичи</div>
+                {availableNeighborhoods.map((n) => (
+                  <button
+                    key={n.id}
+                    className={`dropdown-item ${currentNeighborhood.id === n.id ? 'active' : ''}`}
+                    onClick={() => {
+                      setCurrentNeighborhood(n);
+                      setIsNeighborhoodMenuOpen(false);
+                    }}
+                  >
+                    <span className="item-icon">🏡</span>
+                    <div>
+                      <div className="item-title">{n.name}</div>
+                      <div className="item-subtitle">{n.city} • {n.district}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Action Buttons & User Profile */}
         <div className="actions-section">
+          {/* Quick Share to Telegram / Viber */}
+          <button 
+            type="button"
+            className="btn btn-secondary share-header-btn" 
+            onClick={handleShareInvite}
+            title="Пригласить соседа в домовой чат (Telegram / Viber)"
+          >
+            <Share2 size={16} className="text-emerald" />
+            <span className="btn-label-desktop">Пригласить</span>
+          </button>
+
           {user ? (
             <>
               {/* Quick Create Button */}
@@ -292,15 +352,53 @@ export const Header: React.FC = () => {
           object-fit: cover;
         }
 
+        .neighborhood-current-name {
+          font-weight: 600;
+          max-width: 190px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .share-header-btn {
+          border-color: #86efac;
+          color: #15803d;
+          background: #f0fdf4;
+        }
+        .share-header-btn:hover {
+          background: #dcfce7;
+        }
+
         @media (max-width: 768px) {
-          .dropdown-wrapper { display: none; }
           .logo-subtitle { display: none; }
           .btn-label-desktop { display: none; }
+          .neighborhood-selector-btn { 
+            padding: 6px 8px; 
+            font-size: 0.78rem; 
+            gap: 4px;
+          }
+          .neighborhood-current-name {
+            max-width: 120px;
+          }
+          .share-header-btn { padding: 8px 10px; }
           .reg-nav-btn { padding: 8px 10px; }
-          .write-btn { padding: 8px 12px; border-radius: 20px; }
-          .header-container { padding: 8px 12px; gap: 8px; }
-          .brand-section { gap: 6px; }
-          .actions-section { gap: 6px; }
+          .write-btn { padding: 8px 10px; border-radius: 20px; }
+          .header-container { padding: 8px 10px; gap: 6px; }
+          .brand-section { gap: 6px; min-width: 0; }
+          .actions-section { gap: 6px; flex-shrink: 0; }
+        }
+
+        @media (max-width: 440px) {
+          .neighborhood-current-name {
+            max-width: 90px;
+          }
+          .logo-title {
+            font-size: 1.05rem;
+          }
+          .logo-icon {
+            width: 34px;
+            height: 34px;
+          }
         }
       `}</style>
     </header>
